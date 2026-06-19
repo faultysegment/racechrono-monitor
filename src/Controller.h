@@ -1,28 +1,12 @@
 #pragma once
 
 #include "Model.h"
-#include "Policies/BLEPolicyCallback.h"
+#include "BLEPolicyCallback.h"
 #include <string>
 #include <cstring>
 #include <cstdlib>
 
 // ... skipped defines for brevity ...
-
-#ifndef INPUT_PULLUP
-#define INPUT_PULLUP 5
-#endif
-
-#ifndef OUTPUT
-#define OUTPUT 1
-#endif
-
-#ifndef HIGH
-#define HIGH 1
-#endif
-
-#ifndef LOW
-#define LOW 0
-#endif
 
 #define CMD_TYPE_REMOVE_ALL 0
 #define CMD_TYPE_REMOVE 1
@@ -38,9 +22,6 @@
 #define MAX_REMAINING_PAYLOAD 2048
 #define MAX_PAYLOAD_PART 17
 
-#define BOARD_USER_KEY 6
-#define BOARD_PWR_EN   15
-
 template <typename ModelType, typename ViewType, typename BLEPolicy, typename HWPolicy, typename StoragePolicy>
 class Controller : public BLEPolicyCallback {
 public:
@@ -50,27 +31,11 @@ public:
     }
     
     void setup() {
-        HWPolicy::pinMode(46, OUTPUT);
-        HWPolicy::digitalWrite(46, HIGH);
-
-        HWPolicy::pinMode(BOARD_PWR_EN, OUTPUT);
-        HWPolicy::digitalWrite(BOARD_PWR_EN, HIGH);
-        
-        HWPolicy::pinMode(BOARD_USER_KEY, INPUT_PULLUP);
-        
-        HWPolicy::delay(100);
-
-        HWPolicy::pinMode(39, OUTPUT); HWPolicy::digitalWrite(39, HIGH); 
-        HWPolicy::pinMode(41, OUTPUT); HWPolicy::digitalWrite(41, HIGH); 
-        
-        HWPolicy::delay(100);
+        HWPolicy::initBoard();
 
         StoragePolicy::init();
         model.speedLimit = StoragePolicy::getFloat("limit_speed", 5.0f);
         model.timeLimit = StoragePolicy::getFloat("limit_time", 0.1f);
-
-        HWPolicy::pinMode(0, INPUT_PULLUP); // ENCODER_KEY
-        HWPolicy::initEncoder(4, 5);
 
         HWPolicy::initBattery();
         model.batteryPercent = HWPolicy::getBatteryPercent();
@@ -80,7 +45,7 @@ public:
     }
 
     void loop() {
-        if (HWPolicy::digitalRead(BOARD_USER_KEY) == LOW) {
+        if (HWPolicy::isPowerKeyPressed()) {
             if (!buttonPressed) {
                 buttonPressed = true;
                 buttonPressStartTime = HWPolicy::millis();
@@ -89,10 +54,7 @@ public:
                 HWPolicy::delay(500); 
 
                 view.setBacklight(false);
-                HWPolicy::digitalWrite(BOARD_PWR_EN, LOW); 
-                
-                HWPolicy::sleepEnableExt0Wakeup(BOARD_USER_KEY, LOW);
-                HWPolicy::deepSleepStart();
+                HWPolicy::powerOffBoard();
             }
         } else {
             buttonPressed = false;
@@ -111,14 +73,14 @@ public:
             }
         }
 
-        static int lastEncoderBtn = 1;
-        static uint32_t encoderBtnPressTime = 0;
-        int encoderBtn = HWPolicy::digitalRead(0);
+        static bool lastActionBtn = false;
+        static uint32_t actionBtnPressTime = 0;
+        bool actionBtn = HWPolicy::isActionKeyPressed();
         
-        if (lastEncoderBtn == 1 && encoderBtn == 0) { // Pressed
-            encoderBtnPressTime = HWPolicy::millis();
-        } else if (lastEncoderBtn == 0 && encoderBtn == 1) { // Released
-            uint32_t duration = HWPolicy::millis() - encoderBtnPressTime;
+        if (!lastActionBtn && actionBtn) { // Pressed
+            actionBtnPressTime = HWPolicy::millis();
+        } else if (lastActionBtn && !actionBtn) { // Released
+            uint32_t duration = HWPolicy::millis() - actionBtnPressTime;
             if (duration > 50 && duration < 1000) { 
                 model.isEditMode = !model.isEditMode;
                 if (!model.isEditMode) {
@@ -128,12 +90,12 @@ public:
                 displayUpdateCount = 8; // force update
             }
         }
-        lastEncoderBtn = encoderBtn;
+        lastActionBtn = actionBtn;
 
-        int encDelta = HWPolicy::getEncoderDelta();
-        if (encDelta != 0) {
+        int navDelta = HWPolicy::getNavigationDelta();
+        if (navDelta != 0) {
             if (model.isEditMode) {
-                float change = (encDelta > 0) ? 0.1f : -0.1f;
+                float change = (navDelta > 0) ? 0.1f : -0.1f;
                 if (isConnected) {
                     if (model.currentScreenIndex == 0) {
                         model.timeLimit += change;
@@ -153,13 +115,13 @@ public:
                 }
             } else {
                 if (isConnected) {
-                    if (encDelta > 0) {
+                    if (navDelta > 0) {
                         model.currentScreenIndex = (model.currentScreenIndex + 1) % Model::NUM_SCREENS;
                     } else {
                         model.currentScreenIndex = (model.currentScreenIndex - 1 + Model::NUM_SCREENS) % Model::NUM_SCREENS;
                     }
                 } else {
-                    if (encDelta > 0) {
+                    if (navDelta > 0) {
                         model.disconnectedScreenIndex = (model.disconnectedScreenIndex + 1) % Model::NUM_DISCONNECTED_SCREENS;
                     } else {
                         model.disconnectedScreenIndex = (model.disconnectedScreenIndex - 1 + Model::NUM_DISCONNECTED_SCREENS) % Model::NUM_DISCONNECTED_SCREENS;

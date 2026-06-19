@@ -20,3 +20,7 @@
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Project specific
+font.ttf
+__pycache__/

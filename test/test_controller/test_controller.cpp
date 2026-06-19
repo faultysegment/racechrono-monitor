@@ -1,11 +1,11 @@
 #include <unity.h>
-#include "Model.h"
-#include "View.h"
-#include "Controller.h"
-#include "../Mocks/MockDisplayPolicy.h"
-#include "../Mocks/MockHWPolicy.h"
-#include "../Mocks/MockBLEPolicy.h"
-#include "../Mocks/MockStoragePolicy.h"
+#include "../../src/Model.h"
+#include "../../src/View.h"
+#include "../../src/Controller.h"
+#include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
+#include "../../src/Device_Mock/Policies/MockHWPolicy.h"
+#include "../../src/Device_Mock/Policies/MockBLEPolicy.h"
+#include "../../src/Device_Mock/Policies/MockStoragePolicy.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -35,7 +35,7 @@ void test_controller_ble_connect(void) {
 }
 
 void test_controller_button_power_off(void) {
-    MockHWPolicy::buttonState = 0; // LOW (pressed)
+    MockHWPolicy::powerKeyPressed = true;
     MockHWPolicy::currentMillis = 0;
     
     controller.loop(); // Detects press
@@ -47,24 +47,24 @@ void test_controller_button_power_off(void) {
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("Powering off...") != std::string::npos);
 }
 
-void test_controller_encoder_scroll(void) {
+void test_controller_navigation_scroll(void) {
     controller.setup();
     MockBLEPolicy::simulateConnect();
     model.isConfigured = true; // And configured
     model.currentScreenIndex = 0;
 
-    // Simulate encoder turning right (+1)
-    MockHWPolicy::encoderDelta = 1;
+    // Simulate navigation right (+1)
+    MockHWPolicy::navigationDelta = 1;
     controller.loop();
     TEST_ASSERT_EQUAL(1, model.currentScreenIndex);
 
-    // Simulate encoder turning left (-1)
-    MockHWPolicy::encoderDelta = -1;
+    // Simulate navigation left (-1)
+    MockHWPolicy::navigationDelta = -1;
     controller.loop();
     TEST_ASSERT_EQUAL(0, model.currentScreenIndex);
 
     // Turning left again should wrap around to NUM_SCREENS - 1 (which is 1)
-    MockHWPolicy::encoderDelta = -1;
+    MockHWPolicy::navigationDelta = -1;
     controller.loop();
     TEST_ASSERT_EQUAL(1, model.currentScreenIndex);
 }
@@ -77,35 +77,35 @@ void test_controller_edit_mode(void) {
     model.timeLimit = 0.1f;
     model.isEditMode = false;
 
-    // Simulate encoder button short press
-    MockHWPolicy::encoderKeyState = 0; // Pressed
+    // Simulate action button short press
+    MockHWPolicy::actionKeyPressed = true; // Pressed
     MockHWPolicy::currentMillis = 1000;
     controller.loop();
     
-    MockHWPolicy::encoderKeyState = 1; // Released
+    MockHWPolicy::actionKeyPressed = false; // Released
     MockHWPolicy::currentMillis = 1200; // 200ms duration
     controller.loop();
     
     TEST_ASSERT_TRUE(model.isEditMode);
 
-    // Turn encoder right
-    MockHWPolicy::encoderDelta = 1;
+    // Navigate right
+    MockHWPolicy::navigationDelta = 1;
     controller.loop();
     
     // limit should increase by 0.1
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.2f, model.timeLimit);
     
-    // Turn encoder left
-    MockHWPolicy::encoderDelta = -1;
+    // Navigate left
+    MockHWPolicy::navigationDelta = -1;
     controller.loop();
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.1f, model.timeLimit);
 
-    // Simulate encoder button short press again to save
-    MockHWPolicy::encoderKeyState = 0; // Pressed
+    // Simulate action button short press again to save
+    MockHWPolicy::actionKeyPressed = true; // Pressed
     MockHWPolicy::currentMillis = 2000;
     controller.loop();
     
-    MockHWPolicy::encoderKeyState = 1; // Released
+    MockHWPolicy::actionKeyPressed = false; // Released
     MockHWPolicy::currentMillis = 2200; // 200ms duration
     controller.loop();
     
@@ -119,7 +119,7 @@ void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_controller_ble_connect);
     RUN_TEST(test_controller_button_power_off);
-    RUN_TEST(test_controller_encoder_scroll);
+    RUN_TEST(test_controller_navigation_scroll);
     RUN_TEST(test_controller_edit_mode);
     UNITY_END();
 }
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_controller_ble_connect);
     RUN_TEST(test_controller_button_power_off);
-    RUN_TEST(test_controller_encoder_scroll);
+    RUN_TEST(test_controller_navigation_scroll);
     RUN_TEST(test_controller_edit_mode);
     UNITY_END();
     return 0;

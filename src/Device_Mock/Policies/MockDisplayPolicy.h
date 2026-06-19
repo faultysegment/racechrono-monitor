@@ -33,6 +33,7 @@ public:
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) {}
     int16_t width() { return 320; }
     int16_t height() { return 170; }
+    void flush() {}
 };
 
 #ifdef PIO_UNIT_TESTING

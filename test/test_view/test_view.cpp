@@ -1,8 +1,8 @@
 #include <unity.h>
 #include "Model.h"
 #include "View.h"
-#include "../Mocks/MockDisplayPolicy.h"
-#include "../Mocks/MockHWPolicy.h"
+#include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
+#include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif

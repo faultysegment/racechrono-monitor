@@ -2,12 +2,12 @@
 
 #include "Model.h"
 #include <cmath>
-#include "Screens/IScreen.h"
-#include "Screens/TimeScreen.h"
-#include "Screens/SpeedScreen.h"
-#include "Screens/DisconnectedMsgScreen.h"
-#include "Screens/ConfigTimeScreen.h"
-#include "Screens/ConfigSpeedScreen.h"
+#include "IScreen.h"
+#include "TimeScreen.h"
+#include "SpeedScreen.h"
+#include "DisconnectedMsgScreen.h"
+#include "ConfigTimeScreen.h"
+#include "ConfigSpeedScreen.h"
 
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
@@ -52,6 +52,7 @@ public:
         
         activeScreen->onUpdate(tft, model);
         drawBattery(false);
+        tft.flush();
     }
 
     void drawBattery(bool force) {

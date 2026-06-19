@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "../../src/Policies/BLEPolicyCallback.h"
+#include "BLEPolicyCallback.h"
 
 class MockBLEPolicy {
     static BLEPolicyCallback* ctrl;

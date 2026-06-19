@@ -21,19 +21,51 @@ namespace {
 }
 
 struct RealHWPolicy {
-    static void initEncoder(uint8_t pinA, uint8_t pinB) {
+    static void initBoard() {
+        // T-Embed specific pins
+        ::pinMode(46, OUTPUT);
+        ::digitalWrite(46, HIGH);
+
+        ::pinMode(15, OUTPUT); // BOARD_PWR_EN
+        ::digitalWrite(15, HIGH);
+        
+        ::pinMode(6, INPUT_PULLUP); // BOARD_USER_KEY
+        
+        ::delay(100);
+
+        ::pinMode(39, OUTPUT); ::digitalWrite(39, HIGH); 
+        ::pinMode(41, OUTPUT); ::digitalWrite(41, HIGH); 
+        
+        ::delay(100);
+
+        ::pinMode(0, INPUT_PULLUP); // ENCODER_KEY
+        
         if (!encoder) {
-            encoder = new RotaryEncoder(pinA, pinB, RotaryEncoder::LatchMode::TWO03);
-            ::attachInterrupt(digitalPinToInterrupt(pinA), encIsr, CHANGE);
-            ::attachInterrupt(digitalPinToInterrupt(pinB), encIsr, CHANGE);
+            encoder = new RotaryEncoder(4, 5, RotaryEncoder::LatchMode::TWO03);
+            ::attachInterrupt(digitalPinToInterrupt(4), encIsr, CHANGE);
+            ::attachInterrupt(digitalPinToInterrupt(5), encIsr, CHANGE);
         }
     }
     
-    static int getEncoderDelta() {
+    static int getNavigationDelta() {
         if (!encoder) return 0;
         encoder->tick();
         int dir = (int)encoder->getDirection();
         return dir;
+    }
+
+    static bool isPowerKeyPressed() {
+        return ::digitalRead(6) == LOW; // BOARD_USER_KEY
+    }
+
+    static bool isActionKeyPressed() {
+        return ::digitalRead(0) == LOW; // ENCODER_KEY
+    }
+
+    static void powerOffBoard() {
+        ::digitalWrite(15, LOW); // BOARD_PWR_EN
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)6, LOW); // BOARD_USER_KEY
+        esp_deep_sleep_start();
     }
 
     static void initBattery() {
@@ -52,32 +84,12 @@ struct RealHWPolicy {
         return pct;
     }
 
-    static void pinMode(uint8_t pin, uint8_t mode) {
-        ::pinMode(pin, mode);
-    }
-    
-    static void digitalWrite(uint8_t pin, uint8_t val) {
-        ::digitalWrite(pin, val);
-    }
-    
-    static int digitalRead(uint8_t pin) {
-        return ::digitalRead(pin);
-    }
-    
     static void delay(uint32_t ms) {
         ::delay(ms);
     }
     
     static uint32_t millis() {
         return ::millis();
-    }
-    
-    static void sleepEnableExt0Wakeup(uint8_t pin, int level) {
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)pin, level);
-    }
-    
-    static void deepSleepStart() {
-        esp_deep_sleep_start();
     }
     
     static void getMacDefault(uint8_t* mac) {

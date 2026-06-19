@@ -3,53 +3,51 @@
 
 struct MockHWPolicy {
     static uint32_t currentMillis;
-    static int buttonState;
-    static int encoderKeyState;
+    static bool powerKeyPressed;
+    static bool actionKeyPressed;
     static bool sleepCalled;
 
-    static int encoderDelta;
+    static int navigationDelta;
     static int batteryPercent;
 
     static void reset() {
         currentMillis = 0;
-        buttonState = 1; // HIGH usually
-        encoderKeyState = 1; // HIGH usually
+        powerKeyPressed = false;
+        actionKeyPressed = false;
         sleepCalled = false;
-        encoderDelta = 0;
+        navigationDelta = 0;
         batteryPercent = 100;
     }
 
-    static void initEncoder(uint8_t pinA, uint8_t pinB) {}
+    static void initBoard() {}
     
-    static int getEncoderDelta() {
-        int d = encoderDelta;
-        encoderDelta = 0;
+    static int getNavigationDelta() {
+        int d = navigationDelta;
+        navigationDelta = 0;
         return d;
+    }
+
+    static bool isPowerKeyPressed() {
+        return powerKeyPressed;
+    }
+
+    static bool isActionKeyPressed() {
+        return actionKeyPressed;
+    }
+
+    static void powerOffBoard() {
+        sleepCalled = true;
     }
 
     static void initBattery() {}
     static int getBatteryPercent() { return batteryPercent; }
 
-    static void pinMode(uint8_t pin, uint8_t mode) {}
-    static void digitalWrite(uint8_t pin, uint8_t val) {}
-    static int digitalRead(uint8_t pin) {
-        if (pin == 6) return buttonState; // BOARD_USER_KEY
-        if (pin == 0) return encoderKeyState; // ENCODER_KEY
-        return 0;
-    }
-    
     static void delay(uint32_t ms) {
         currentMillis += ms;
     }
     
     static uint32_t millis() {
         return currentMillis;
-    }
-    
-    static void sleepEnableExt0Wakeup(uint8_t pin, int level) {}
-    
-    static void deepSleepStart() {
-        sleepCalled = true;
     }
     
     static void getMacDefault(uint8_t* mac) {
@@ -62,9 +60,9 @@ struct MockHWPolicy {
 // but for unity tests we usually compile them per-test executable.
 #ifdef PIO_UNIT_TESTING
 uint32_t MockHWPolicy::currentMillis = 0;
-int MockHWPolicy::buttonState = 1;
-int MockHWPolicy::encoderKeyState = 1;
+bool MockHWPolicy::powerKeyPressed = false;
+bool MockHWPolicy::actionKeyPressed = false;
 bool MockHWPolicy::sleepCalled = false;
-int MockHWPolicy::encoderDelta = 0;
+int MockHWPolicy::navigationDelta = 0;
 int MockHWPolicy::batteryPercent = 100;
 #endif

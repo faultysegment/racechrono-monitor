@@ -1,25 +1,29 @@
+#ifndef PIO_UNIT_TESTING
+
+#include "App.h"
+
+App app;
+
+#ifdef ARDUINO
 #include <Arduino.h>
-#include "Model.h"
-#include "View.h"
-#include "Controller.h"
-
-#include "Policies/RealHWPolicy.h"
-#include "Policies/RealDisplayPolicy.h"
-#include "Policies/RealBLEPolicy.h"
-#include "Policies/RealStoragePolicy.h"
-
-// Define concrete types
-using AppView = View<RealDisplayPolicy, RealHWPolicy>;
-using AppController = Controller<Model, AppView, RealBLEPolicy, RealHWPolicy, RealStoragePolicy>;
-
-Model model;
-AppView view(model);
-AppController controller(model, view);
 
 void setup() {
-    controller.setup();
+    app.setup();
 }
 
 void loop() {
-    controller.loop();
+    app.loop();
 }
+
+#else
+
+int main(int argc, char* argv[]) {
+    app.setup();
+    while (app.isRunning()) {
+        app.loop();
+    }
+    return 0;
+}
+
+#endif
+#endif // PIO_UNIT_TESTING
