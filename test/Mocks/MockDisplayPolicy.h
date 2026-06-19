@@ -1,0 +1,41 @@
+#pragma once
+#include <cstdint>
+#include <string>
+
+#define TFT_BLACK       0x0000
+#define TFT_BLUE        0x001F
+#define TFT_RED         0xF800
+#define TFT_GREEN       0x07E0
+#define TFT_WHITE       0xFFFF
+#define TFT_LIGHTGREY   0xD69A
+#define TFT_DARKGREY    0x7BEF
+
+class MockDisplayPolicy {
+public:
+    static std::string lastPrint;
+    static uint32_t lastFillScreenColor;
+
+    static void reset() {
+        lastPrint = "";
+        lastFillScreenColor = 0;
+    }
+
+    void init() {}
+    void setRotation(uint8_t r) {}
+    void fillScreen(uint32_t color) { lastFillScreenColor = color; }
+    void setCursor(int16_t x, int16_t y) {}
+    void setTextWrap(bool wrap) {}
+    void setTextSize(uint8_t size) {}
+    void setTextColor(uint32_t c, uint32_t bg) {}
+    void print(const char* str) { lastPrint += str; }
+    void print(int n) { lastPrint += std::to_string(n); }
+    void println(const char* str) { lastPrint += str; lastPrint += "\n"; }
+    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) {}
+    int16_t width() { return 320; }
+    int16_t height() { return 170; }
+};
+
+#ifdef PIO_UNIT_TESTING
+std::string MockDisplayPolicy::lastPrint = "";
+uint32_t MockDisplayPolicy::lastFillScreenColor = 0;
+#endif
