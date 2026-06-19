@@ -2,23 +2,28 @@
 
 #include "Model.h"
 #include <cmath>
+#include <vector>
 #include "IScreen.h"
-#include "TimeScreen.h"
-#include "SpeedScreen.h"
-#include "DisconnectedMsgScreen.h"
-#include "ConfigTimeScreen.h"
-#include "ConfigSpeedScreen.h"
 
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
 public:
-    View(Model& m) : model(m), displayStarted(false), lastScreenIndex(-1), lastEditMode(false), lastConnected(false) {
-        connectedScreens[0] = &timeScreen;
-        connectedScreens[1] = &speedScreen;
-        
-        disconnectedScreens[0] = &disconnectedMsgScreen;
-        disconnectedScreens[1] = &configSpeedScreen;
-        disconnectedScreens[2] = &configTimeScreen;
+    View(Model& m) : model(m), displayStarted(false), lastScreenIndex(-1), lastEditMode(false), lastConnected(false) {}
+
+    void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
+        connectedScreens.push_back(screen);
+    }
+
+    void addDisconnectedScreen(IScreen<DisplayPolicy>* screen) {
+        disconnectedScreens.push_back(screen);
+    }
+
+    int getNumConnectedScreens() const {
+        return connectedScreens.size();
+    }
+
+    int getNumDisconnectedScreens() const {
+        return disconnectedScreens.size();
     }
     
     void init() {
@@ -47,30 +52,12 @@ public:
             lastConnected = model.isConnected;
             
             activeScreen->onShow(tft, model);
-            drawBattery(true);
+            tft.drawBattery(model.batteryPercent, true);
         }
         
         activeScreen->onUpdate(tft, model);
-        drawBattery(false);
+        tft.drawBattery(model.batteryPercent, false);
         tft.flush();
-    }
-
-    void drawBattery(bool force) {
-        static int lastBat = -2;
-        if (force || lastBat != model.batteryPercent) {
-            lastBat = model.batteryPercent;
-            int screenW = tft.width();
-            tft.setTextSize(2);
-            tft.setTextColor(0xFFFF, 0x0000); 
-            tft.setCursor(screenW - 55, 10); 
-            char buf[16];
-            if (model.batteryPercent >= 0 && model.batteryPercent <= 100) {
-                snprintf(buf, sizeof(buf), "%3d%%", model.batteryPercent);
-            } else {
-                snprintf(buf, sizeof(buf), "---%%");
-            }
-            tft.print(buf);
-        }
     }
     
     void showMessage(const char* msg, uint32_t color = 0xFFFF, uint32_t bg = 0x0000) {
@@ -127,12 +114,6 @@ private:
     bool lastEditMode;
     bool lastConnected;
 
-    TimeScreen<DisplayPolicy> timeScreen;
-    SpeedScreen<DisplayPolicy> speedScreen;
-    IScreen<DisplayPolicy>* connectedScreens[Model::NUM_SCREENS];
-
-    DisconnectedMsgScreen<DisplayPolicy> disconnectedMsgScreen;
-    ConfigSpeedScreen<DisplayPolicy> configSpeedScreen;
-    ConfigTimeScreen<DisplayPolicy> configTimeScreen;
-    IScreen<DisplayPolicy>* disconnectedScreens[Model::NUM_DISCONNECTED_SCREENS];
+    std::vector<IScreen<DisplayPolicy>*> connectedScreens;
+    std::vector<IScreen<DisplayPolicy>*> disconnectedScreens;
 };

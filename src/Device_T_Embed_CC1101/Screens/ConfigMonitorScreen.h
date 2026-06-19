@@ -3,8 +3,12 @@
 #include <cstdio>
 
 template <typename DisplayPolicy>
-class ConfigTimeScreen : public IScreen<DisplayPolicy> {
+class ConfigMonitorScreen : public IScreen<DisplayPolicy> {
+    const char* title;
+    float* limitPtr;
 public:
+    ConfigMonitorScreen(const char* title, float* limitPtr) : title(title), limitPtr(limitPtr) {}
+
     void onShow(DisplayPolicy& tft, Model& model) override {
         tft.fillScreen(0x0000); 
         tft.setTextColor(0xFFFF, 0x0000); 
@@ -12,7 +16,7 @@ public:
         
         int screenW = tft.width();
         tft.setCursor(screenW / 2 - 60, 10);
-        tft.print("TIME LIMIT");
+        tft.print(title);
         
         drawLimit(tft, model);
     }
@@ -27,7 +31,7 @@ private:
         tft.setTextColor(model.isEditMode ? 0xFFE0 : 0xFFFF, 0x0000); // Yellow if editing
         tft.setCursor(screenW / 2 - 30, 40);
         char buf[16];
-        snprintf(buf, sizeof(buf), "%.1f  ", model.timeLimit);
+        snprintf(buf, sizeof(buf), "%.1f  ", *limitPtr);
         tft.print(buf);
     }
 };

@@ -6,12 +6,23 @@
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Mock/Policies/MockBLEPolicy.h"
 #include "../../src/Device_Mock/Policies/MockStoragePolicy.h"
+#include "../../src/Device_T_Embed_CC1101/Screens/MonitorScreen.h"
+#include "../../src/Device_T_Embed_CC1101/Screens/DualMonitorScreen.h"
+#include "../../src/Device_T_Embed_CC1101/Screens/DisconnectedMsgScreen.h"
+#include "../../src/Device_T_Embed_CC1101/Screens/ConfigMonitorScreen.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
 
 Model model;
 View<MockDisplayPolicy, MockHWPolicy> view(model);
+
+MonitorScreen<MockDisplayPolicy> monitorScreen0(0);
+MonitorScreen<MockDisplayPolicy> monitorScreen1(1);
+DualMonitorScreen<MockDisplayPolicy> dualMonitorScreen;
+DisconnectedMsgScreen<MockDisplayPolicy> disconnectedMsgScreen;
+ConfigMonitorScreen<MockDisplayPolicy> configSpeedScreen("SPEED LIMIT", &model.speedLimit);
+ConfigMonitorScreen<MockDisplayPolicy> configTimeScreen("TIME LIMIT", &model.timeLimit);
 using TestController = Controller<Model, View<MockDisplayPolicy, MockHWPolicy>, MockBLEPolicy, MockHWPolicy, MockStoragePolicy>;
 
 TestController controller(model, view);
@@ -22,6 +33,16 @@ void setUp(void) {
     MockHWPolicy::reset();
     MockStoragePolicy::reset();
     MockBLEPolicy::reset();
+
+    if (view.getNumConnectedScreens() == 0) {
+        view.addConnectedScreen(&monitorScreen0);
+        view.addConnectedScreen(&monitorScreen1);
+        view.addConnectedScreen(&dualMonitorScreen);
+        
+        view.addDisconnectedScreen(&disconnectedMsgScreen);
+        view.addDisconnectedScreen(&configSpeedScreen);
+        view.addDisconnectedScreen(&configTimeScreen);
+    }
 }
 
 void tearDown(void) {}
@@ -63,10 +84,10 @@ void test_controller_navigation_scroll(void) {
     controller.loop();
     TEST_ASSERT_EQUAL(0, model.currentScreenIndex);
 
-    // Turning left again should wrap around to NUM_SCREENS - 1 (which is 1)
+    // Turning left again should wrap around to NUM_SCREENS - 1 (which is 2)
     MockHWPolicy::navigationDelta = -1;
     controller.loop();
-    TEST_ASSERT_EQUAL(1, model.currentScreenIndex);
+    TEST_ASSERT_EQUAL(2, model.currentScreenIndex);
 }
 
 void test_controller_edit_mode(void) {
@@ -75,6 +96,7 @@ void test_controller_edit_mode(void) {
     model.isConfigured = true;
     model.currentScreenIndex = 0; // Time Screen
     model.timeLimit = 0.1f;
+    model.addMonitor("M", 1.0f, "TIME", false, 2, &model.timeLimit);
     model.isEditMode = false;
 
     // Simulate action button short press

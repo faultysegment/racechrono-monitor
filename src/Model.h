@@ -11,8 +11,12 @@ public:
 
     struct Monitor {
         char name[MONITOR_NAME_MAX + 1];
+        char title[16];
         float multiplier;
         int32_t value;
+        bool positiveIsGood;
+        int decimals;
+        float* limitPtr;
     };
 
     Monitor monitors[MAX_MONITORS];
@@ -21,11 +25,8 @@ public:
     bool isConnected;
     bool isConfiguring;
     bool isConfigured;
-    
     int currentScreenIndex; // used when connected
     int disconnectedScreenIndex; // used when disconnected
-    static const int NUM_SCREENS = 2;
-    static const int NUM_DISCONNECTED_SCREENS = 3;
 
     bool isEditMode;
     float timeLimit;
@@ -35,7 +36,7 @@ public:
 
     Model();
     void reset();
-    bool addMonitor(const char* name, float multiplier);
+    bool addMonitor(const char* name, float multiplier, const char* title, bool positiveIsGood, int decimals, float* limitPtr);
     void setMonitorValue(int id, int32_t value);
     void resetMonitors();
 };

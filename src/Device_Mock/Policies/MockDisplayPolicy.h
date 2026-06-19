@@ -34,6 +34,9 @@ public:
     int16_t width() { return 320; }
     int16_t height() { return 170; }
     void flush() {}
+    void drawBattery(int percent, bool force = false) {
+        lastPrint += "Bat:" + std::to_string(percent) + "%";
+    }
 };
 
 #ifdef PIO_UNIT_TESTING

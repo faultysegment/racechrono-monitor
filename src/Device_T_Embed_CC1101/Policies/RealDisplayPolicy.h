@@ -20,5 +20,23 @@ public:
     int16_t width() { return tft.width(); }
     int16_t height() { return tft.height(); }
     void flush() {}
+
+    void drawBattery(int percent, bool force = false) {
+        static int lastBat = -2;
+        if (force || lastBat != percent) {
+            lastBat = percent;
+            int screenW = width();
+            setTextSize(2);
+            setTextColor(0xFFFF, 0x0000); 
+            setCursor(screenW - 55, 10); 
+            char buf[16];
+            if (percent >= 0 && percent <= 100) {
+                snprintf(buf, sizeof(buf), "%3d%%", percent);
+            } else {
+                snprintf(buf, sizeof(buf), "---%%");
+            }
+            print(buf);
+        }
+    }
 };
 #endif

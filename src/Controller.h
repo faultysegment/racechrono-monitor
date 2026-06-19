@@ -97,12 +97,12 @@ public:
             if (model.isEditMode) {
                 float change = (navDelta > 0) ? 0.1f : -0.1f;
                 if (isConnected) {
-                    if (model.currentScreenIndex == 0) {
-                        model.timeLimit += change;
-                        if (model.timeLimit < 0.1f) model.timeLimit = 0.1f;
-                    } else if (model.currentScreenIndex == 1) {
-                        model.speedLimit += change;
-                        if (model.speedLimit < 0.1f) model.speedLimit = 0.1f;
+                    if (model.currentScreenIndex < model.nextMonitorId) {
+                        float* limitPtr = model.monitors[model.currentScreenIndex].limitPtr;
+                        if (limitPtr) {
+                            *limitPtr += change;
+                            if (*limitPtr < 0.1f) *limitPtr = 0.1f;
+                        }
                     }
                 } else {
                     if (model.disconnectedScreenIndex == 1) { // Speed Config
@@ -115,16 +115,22 @@ public:
                 }
             } else {
                 if (isConnected) {
-                    if (navDelta > 0) {
-                        model.currentScreenIndex = (model.currentScreenIndex + 1) % Model::NUM_SCREENS;
-                    } else {
-                        model.currentScreenIndex = (model.currentScreenIndex - 1 + Model::NUM_SCREENS) % Model::NUM_SCREENS;
+                    int numConnected = view.getNumConnectedScreens();
+                    if (numConnected > 0) {
+                        if (navDelta > 0) {
+                            model.currentScreenIndex = (model.currentScreenIndex + 1) % numConnected;
+                        } else {
+                            model.currentScreenIndex = (model.currentScreenIndex - 1 + numConnected) % numConnected;
+                        }
                     }
                 } else {
-                    if (navDelta > 0) {
-                        model.disconnectedScreenIndex = (model.disconnectedScreenIndex + 1) % Model::NUM_DISCONNECTED_SCREENS;
-                    } else {
-                        model.disconnectedScreenIndex = (model.disconnectedScreenIndex - 1 + Model::NUM_DISCONNECTED_SCREENS) % Model::NUM_DISCONNECTED_SCREENS;
+                    int numDisconnected = view.getNumDisconnectedScreens();
+                    if (numDisconnected > 0) {
+                        if (navDelta > 0) {
+                            model.disconnectedScreenIndex = (model.disconnectedScreenIndex + 1) % numDisconnected;
+                        } else {
+                            model.disconnectedScreenIndex = (model.disconnectedScreenIndex - 1 + numDisconnected) % numDisconnected;
+                        }
                     }
                 }
             }
@@ -255,20 +261,20 @@ private:
         }
     }
 
-    bool addMonitorConfig(const char* monitorName, const char* filterDef, float multiplier) {
+    bool addMonitorConfig(const char* monitorName, const char* filterDef, float multiplier, const char* title, bool positiveIsGood, int decimals, float* limitPtr) {
         if (model.nextMonitorId < Model::MAX_MONITORS) {
             if (!sendConfigCommand(CMD_TYPE_ADD, model.nextMonitorId, filterDef)) {
                 return false;
             }
-            return model.addMonitor(monitorName, multiplier);
+            return model.addMonitor(monitorName, multiplier, title, positiveIsGood, decimals, limitPtr);
         }
         return true;
     }
 
     bool configureMonitors() {
         model.resetMonitors();
-        if (!addMonitorConfig("Delta curr lap time", "channel(device(lap), delta_lap_time)*100.0", 0.01) ||
-            !addMonitorConfig("Delta speed", "channel(device(calc), delta_speed)*100", 0.036)) {
+        if (!addMonitorConfig("Delta curr lap time", "channel(device(lap), delta_lap_time)*100.0", 0.01, "TIME", false, 2, &model.timeLimit) ||
+            !addMonitorConfig("Delta speed", "channel(device(calc), delta_speed)*100", 0.036, "SPEED", true, 1, &model.speedLimit)) {
             return false;
         }
         return true;    

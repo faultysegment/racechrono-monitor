@@ -4,19 +4,24 @@
 #include <cstdio>
 
 template <typename DisplayPolicy>
-class TimeScreen : public IScreen<DisplayPolicy> {
+class MonitorScreen : public IScreen<DisplayPolicy> {
+    int mIdx;
 public:
+    MonitorScreen(int monitorIndex) : mIdx(monitorIndex) {}
+
     void onShow(DisplayPolicy& tft, Model& model) override {
         tft.fillScreen(0x0000); 
         tft.setTextColor(0xFFFF, 0x0000); 
         tft.setTextSize(2);
-        int screenW = tft.width();
         tft.setCursor(10, 10);
-        tft.print("TIME");
+        if (model.nextMonitorId > mIdx) {
+            tft.print(model.monitors[mIdx].title);
+        } else {
+            tft.print("WAIT");
+        }
     }
 
     void onUpdate(DisplayPolicy& tft, Model& model) override {
-        int mIdx = 0;
         if (model.nextMonitorId > mIdx) {
             int screenW = tft.width();
             int screenH = tft.height();
@@ -25,12 +30,15 @@ public:
             int barX = 0;
             int maxBarW = screenW;
             
+            float* limitPtr = model.monitors[mIdx].limitPtr;
+            float currentLimit = limitPtr ? *limitPtr : 1.0f;
+            
             if (model.isEditMode) {
                 // In edit mode, hide metrics, show only limit
                 tft.setTextColor(0xFFE0, 0x0000);
                 tft.setTextSize(3);
                 char buf[32];
-                snprintf(buf, sizeof(buf), " LIM: %.1f  ", model.timeLimit);
+                snprintf(buf, sizeof(buf), " LIM: %.1f  ", currentLimit);
                 tft.setCursor(screenW / 2 - 100, 50);
                 tft.print(buf);
                 
@@ -39,14 +47,18 @@ public:
             } else {
                 if (model.monitors[mIdx].value != Model::INVALID_VALUE) {
                     float val = (float)model.monitors[mIdx].value * model.monitors[mIdx].multiplier;
-                    uint32_t color = (val < 0) ? 0xF800 : 0x07E0; // RED : GREEN
-                    if (val == 0) color = 0x7BEF; // DARKGREY
+                    
+                    uint32_t color = 0x7BEF; // DARKGREY
+                    if (val > 0) {
+                        color = model.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
+                    } else if (val < 0) {
+                        color = model.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
+                    }
                     
                     float absVal = std::abs(val);
-                    float maxVal = model.timeLimit;
-                    if (absVal > maxVal) absVal = maxVal;
+                    if (absVal > currentLimit) absVal = currentLimit;
                     
-                    int fillW = (int)((absVal / maxVal) * maxBarW);
+                    int fillW = (int)((absVal / currentLimit) * maxBarW);
                     
                     tft.fillRect(barX, barY, fillW, barH, color); 
                     tft.fillRect(barX + fillW, barY, maxBarW - fillW, barH, 0x7BEF); 
@@ -55,7 +67,14 @@ public:
                     tft.setTextColor(color, 0x0000);
                     tft.setTextSize(3);
                     char valBuf[32];
-                    snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
+                    
+                    // Format based on decimals
+                    if (model.monitors[mIdx].decimals == 2) {
+                        snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
+                    } else {
+                        snprintf(valBuf, sizeof(valBuf), "   %+.1f   ", val);
+                    }
+                    
                     tft.setCursor(screenW / 2 - 100, 50);
                     tft.print(valBuf);
                     
@@ -64,7 +83,11 @@ public:
                     tft.setTextColor(0x7BEF, 0x0000);
                     tft.setTextSize(3);
                     tft.setCursor(screenW / 2 - 100, 50);
-                    tft.print("   --.--   ");
+                    if (model.monitors[mIdx].decimals == 2) {
+                        tft.print("   --.--   ");
+                    } else {
+                        tft.print("   --.-   ");
+                    }
                 }
             }
         }

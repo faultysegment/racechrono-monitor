@@ -7,10 +7,11 @@ public:
     void onShow(DisplayPolicy& tft, Model& model) override {
         tft.fillScreen(0x0000); 
         tft.setTextColor(0xFFFF, 0xF800); 
-        tft.setTextSize(2);
+        tft.setTextSize(6); // Larger size for HD
         
         int screenW = tft.width();
-        tft.setCursor(screenW / 2 - 100, 40);
+        int screenH = tft.height();
+        tft.setCursor(screenW / 2 - 350, screenH / 2 - 50);
         tft.print("No BLE connection!");
     }
 

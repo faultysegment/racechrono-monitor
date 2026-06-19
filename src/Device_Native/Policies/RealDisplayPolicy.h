@@ -25,7 +25,7 @@ public:
     void init() {
         SDL_Init(SDL_INIT_VIDEO);
         TTF_Init();
-        window = SDL_CreateWindow("RaceChrono Monitor (Mock)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 320, 170, 0);
+        window = SDL_CreateWindow("RaceChrono Monitor (Native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, 0);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         // Load default font. Note: requires a ttf file in the working directory!
         font = TTF_OpenFont("font.ttf", 16); 
@@ -33,8 +33,8 @@ public:
 
     void setRotation(int r) { } // Ignore for mock
 
-    int width() { return 320; }
-    int height() { return 170; }
+    int width() { return 1280; }
+    int height() { return 720; }
 
     void fillScreen(uint16_t color) {
         setSDLColor(color);
@@ -55,7 +55,12 @@ public:
     void setTextWrap(bool wrap) {}
 
     void setTextSize(int size) {
-        textSize = size;
+        if (size <= 0) size = 1;
+        if (textSize != size) {
+            textSize = size;
+            if (font) TTF_CloseFont(font);
+            font = TTF_OpenFont("font.ttf", 16 * size);
+        }
     }
 
     void setTextColor(uint16_t color, uint16_t bg = 0x0000) {
@@ -85,9 +90,9 @@ public:
         if (surface) {
             SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
             
-            // Adjust size based on setTextSize
-            int w = surface->w * textSize;
-            int h = surface->h * textSize;
+            // Use native surface size (already scaled by point size)
+            int w = surface->w;
+            int h = surface->h;
             
             SDL_Rect dest = {cursorX, cursorY, w, h};
             SDL_RenderCopy(renderer, texture, NULL, &dest);
@@ -115,5 +120,22 @@ public:
 
     void flush() {
         SDL_RenderPresent(renderer);
+    }
+
+    void drawBattery(int percent, bool force = false) {
+        static int lastBat = -2;
+        if (force || lastBat != percent) {
+            lastBat = percent;
+            setTextSize(4);
+            setTextColor(0xFFFF, 0x0000); 
+            setCursor(width() - 250, 20); 
+            char buf[16];
+            if (percent >= 0 && percent <= 100) {
+                snprintf(buf, sizeof(buf), "%3d%%", percent);
+            } else {
+                snprintf(buf, sizeof(buf), "---%%");
+            }
+            print(buf);
+        }
     }
 };
