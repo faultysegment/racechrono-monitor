@@ -2,6 +2,7 @@
 #include "IScreen.h"
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 
 template <typename DisplayPolicy>
 class DualMonitorScreen : public IScreen<DisplayPolicy> {
@@ -46,14 +47,28 @@ private:
         float* limitPtr = model.monitors[mIdx].limitPtr;
         float currentLimit = limitPtr ? *limitPtr : 1.0f;
         
+        char prefix = ' ';
+        uint32_t goodColor = 0x07E0; // GREEN
+        uint32_t badColor = 0xF800;  // RED
+
+        if (strcmp(model.monitors[mIdx].title, "TIME") == 0) {
+            goodColor = 0x07E0;
+            badColor = 0xF800;
+            prefix = 'T';
+        } else if (strcmp(model.monitors[mIdx].title, "SPEED") == 0) {
+            goodColor = 0x07FF; // CYAN
+            badColor = 0xFD20;  // ORANGE
+            prefix = 'S';
+        }
+
         if (model.monitors[mIdx].value != Model::INVALID_VALUE) {
             float val = (float)model.monitors[mIdx].value * model.monitors[mIdx].multiplier;
             
             uint32_t color = 0x7BEF; // DARKGREY
             if (val > 0) {
-                color = model.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
+                color = model.monitors[mIdx].positiveIsGood ? goodColor : badColor;
             } else if (val < 0) {
-                color = model.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
+                color = model.monitors[mIdx].positiveIsGood ? badColor : goodColor;
             }
             
             float absVal = std::abs(val);
@@ -70,9 +85,9 @@ private:
             char valBuf[32];
             
             if (model.monitors[mIdx].decimals == 2) {
-                snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
+                snprintf(valBuf, sizeof(valBuf), "%c  %+.2f   ", prefix, val);
             } else {
-                snprintf(valBuf, sizeof(valBuf), "   %+.1f   ", val);
+                snprintf(valBuf, sizeof(valBuf), "%c  %+.1f   ", prefix, val);
             }
             
             tft.setCursor(maxBarW / 2 - 100, textY);
@@ -83,11 +98,13 @@ private:
             tft.setTextColor(0x7BEF, 0x0000);
             tft.setTextSize(3);
             tft.setCursor(maxBarW / 2 - 100, textY);
+            char valBuf[32];
             if (model.monitors[mIdx].decimals == 2) {
-                tft.print("   --.--   ");
+                snprintf(valBuf, sizeof(valBuf), "%c  --.--   ", prefix);
             } else {
-                tft.print("   --.-   ");
+                snprintf(valBuf, sizeof(valBuf), "%c  --.-   ", prefix);
             }
+            tft.print(valBuf);
         }
     }
 };

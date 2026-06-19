@@ -1,6 +1,5 @@
 #pragma once
 
-#ifndef PIO_UNIT_TESTING
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <esp_mac.h>
@@ -96,4 +95,3 @@ struct RealHWPolicy {
         esp_efuse_mac_get_default(mac);
     }
 };
-#endif

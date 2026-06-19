@@ -1,5 +1,4 @@
 #pragma once
-#ifndef PIO_UNIT_TESTING
 #include <Preferences.h>
 
 class RealStoragePolicy {
@@ -21,4 +20,3 @@ public:
         prefs.end();
     }
 };
-#endif

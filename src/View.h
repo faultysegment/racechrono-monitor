@@ -30,10 +30,7 @@ public:
         tft.init();
         tft.setRotation(3);
 
-#ifdef TFT_BL
-        HWPolicy::pinMode(TFT_BL, 1); // 1 = OUTPUT
-        setBacklight(true);
-#endif
+        tft.setBacklight(true);
 
         tft.fillScreen(0x001F); // TFT_BLUE
         tft.setCursor(0, 0);
@@ -101,9 +98,7 @@ public:
     }
     
     void setBacklight(bool on) {
-#ifdef TFT_BL
-        HWPolicy::digitalWrite(TFT_BL, on ? 1 : 0); 
-#endif
+        tft.setBacklight(on);
     }
 
 private:

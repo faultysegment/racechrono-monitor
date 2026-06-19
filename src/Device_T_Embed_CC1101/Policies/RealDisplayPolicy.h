@@ -1,6 +1,5 @@
 #pragma once
 
-#ifndef PIO_UNIT_TESTING
 #include <TFT_eSPI.h>
 
 class RealDisplayPolicy {
@@ -20,6 +19,13 @@ public:
     int16_t width() { return tft.width(); }
     int16_t height() { return tft.height(); }
     void flush() {}
+    
+    void setBacklight(bool on) {
+#ifdef TFT_BL
+        ::pinMode(TFT_BL, OUTPUT);
+        ::digitalWrite(TFT_BL, on ? HIGH : LOW);
+#endif
+    }
 
     void drawBattery(int percent, bool force = false) {
         static int lastBat = -2;
@@ -39,4 +45,3 @@ public:
         }
     }
 };
-#endif

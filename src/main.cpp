@@ -1,12 +1,17 @@
-#ifndef PIO_UNIT_TESTING
+#ifdef ARDUINO
+#include <Arduino.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <TFT_eSPI.h>
+#include <BLEDevice.h>
+#include <Preferences.h>
+#endif
 
 #include "App.h"
 
 App app;
 
 #ifdef ARDUINO
-#include <Arduino.h>
-
 void setup() {
     app.setup();
 }
@@ -26,4 +31,3 @@ int main(int argc, char* argv[]) {
 }
 
 #endif
-#endif // PIO_UNIT_TESTING

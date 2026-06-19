@@ -1,5 +1,4 @@
 #pragma once
-#ifndef PIO_UNIT_TESTING
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -91,4 +90,3 @@ public:
         }
     }
 };
-#endif
