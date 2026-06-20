@@ -1,5 +1,5 @@
 #include <unity.h>
-#include "Model.h"
+#include "../../src/AppState.h"
 #include "View.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
@@ -11,18 +11,18 @@
 #include <Arduino.h>
 #endif
 
-Model model;
-View<MockDisplayPolicy, MockHWPolicy> view(model);
+AppState state;
+View<MockDisplayPolicy, MockHWPolicy> view(state);
 
 MonitorScreen<MockDisplayPolicy> monitorScreen0(0);
 MonitorScreen<MockDisplayPolicy> monitorScreen1(1);
 DualMonitorScreen<MockDisplayPolicy> dualMonitorScreen;
 DisconnectedMsgScreen<MockDisplayPolicy> disconnectedMsgScreen;
-ConfigMonitorScreen<MockDisplayPolicy> configSpeedScreen("SPEED LIMIT", &model.speedLimit);
-ConfigMonitorScreen<MockDisplayPolicy> configTimeScreen("TIME LIMIT", &model.timeLimit);
+ConfigMonitorScreen<MockDisplayPolicy> configSpeedScreen("SPEED LIMIT", &state.speedLimit);
+ConfigMonitorScreen<MockDisplayPolicy> configTimeScreen("TIME LIMIT", &state.timeLimit);
 
 void setUp(void) {
-    model.reset();
+    state.reset();
     MockDisplayPolicy::reset();
     MockHWPolicy::reset();
 
@@ -40,34 +40,34 @@ void setUp(void) {
 void tearDown(void) {}
 
 void test_view_show_connected(void) {
-    view.showConnected();
+    view.processEvent(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
     TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastFillScreenColor);
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("BLE connected!") != std::string::npos);
 }
 
 void test_view_show_disconnected(void) {
-    view.showDisconnected();
+    view.processEvent(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
     TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastFillScreenColor);
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("No BLE connection!") != std::string::npos);
 }
 
 void test_view_update_bars(void) {
-    model.isConnected = true;
-    model.speedLimit = 5.0f;
-    model.timeLimit = 0.1f;
-    model.addMonitor("M1", 1.0f, "TIME", false, 2, &model.timeLimit);
-    model.addMonitor("M2", 1.0f, "SPEED", true, 1, &model.speedLimit);
-    model.setMonitorValue(0, 10);
-    model.setMonitorValue(1, -5);
+    state.isConnected = true;
+    state.speedLimit = 5.0f;
+    state.timeLimit = 0.1f;
+    state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
+    state.addMonitor("M2", 1.0f, "SPEED", true, 1, &state.speedLimit);
+    state.setMonitorValue(0, 10);
+    state.setMonitorValue(1, -5);
     
     // Test screen 0 (Time)
-    model.currentScreenIndex = 0;
-    view.update();
+    state.currentScreenIndex = 0;
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
 
     // Test screen 1 (Speed)
-    model.currentScreenIndex = 1;
-    view.update();
+    state.currentScreenIndex = 1;
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
 }
 

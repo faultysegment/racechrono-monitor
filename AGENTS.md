@@ -2,34 +2,34 @@
 
 This document contains architectural decisions, coding standards, and testing strategies adopted in this project. **All AI agents working on this codebase must adhere strictly to these rules.**
 
-## 1. Architectural Pattern: Policy-Based MVC
+## 1. Architectural Pattern: Event-Driven Architecture (Actor Model)
 
-We employ a highly decoupled **Model-View-Controller (MVC)** architecture. However, instead of using classic C++ interfaces (virtual functions) which introduce vtable overhead, we use **Template-based Policy Injection**.
+We employ a highly decoupled **Event-Driven Architecture** utilizing a central `EventBus` and FreeRTOS tasks. We have completely moved away from MVC and shared mutable state (like a global Model) to eliminate data races and mutex overhead.
 
-- **Model (`src/Model.h`)**: Pure data container. Knows nothing about hardware, BLE, or UI. 
-- **View (`src/View.h`)**: Pure UI rendering logic. Takes `Model&` and uses a `DisplayPolicy` to draw onto the screen. It internally instantiates its display policy to encapsulate drawing operations.
-- **Controller (`src/Controller.h`)**: The central brain. It receives hardware inputs (via `HWPolicy`), updates the `Model`, interacts with BLE (via `BLEPolicy`), and dictates when the `View` should update.
+- **AppState (`src/AppState.h`)**: Pure UI state container. It is strictly local to the `UITask` (or main execution thread in Native). No other tasks are allowed to touch it.
+- **EventBus (`src/Device_All/EventBus.h`)**: The central communication channel. It is a thread-safe queue implemented using `std::queue`, `std::mutex`, and `std::condition_variable`. All hardware and BLE events are pushed here.
+- **AppLogic (`src/AppLogic.h`)**: The central event processor. It receives events from the `EventBus` and mutates the `AppState`, then tells the `View` to redraw.
+- **View (`src/View.h`)**: Pure UI rendering logic. Takes `AppState&` and uses a `DisplayPolicy` to draw onto the screen.
 
-> **CRITICAL RULE**: Core MVC classes (`Controller.h`, `View.h`, `Model.h`) **must NEVER include** hardware-specific libraries (e.g., `<TFT_eSPI.h>`, `<Arduino.h>`, `<NimBLEDevice.h>`). Any hardware interaction must be injected via template policies.
+> **CRITICAL RULE**: Core classes (`AppLogic.h`, `View.h`, `AppState.h`) **must NEVER include** hardware-specific libraries (e.g., `<TFT_eSPI.h>`, `<Arduino.h>`, `<NimBLEDevice.h>`). Any hardware interaction must be injected via template policies or abstract Event payloads.
 
 ## 2. Device Separation & App Initialization
 
 To prevent `#ifdef` spaghetti, implementations are cleanly separated into dedicated folders inside `src/`:
 
-- **`Device_All/`**: Shared interfaces or structures (e.g., `BLEPolicyCallback`).
+- **`Device_All/`**: Shared interfaces or structures (e.g., `EventBus.h`).
 - **`Device_T_Embed_CC1101/`**: Real ESP32 firmware implementation.
 - **`Device_Mock/`**: Pure software mocks utilized purely for native unit testing.
 - **`Device_Native/`**: A full PC Simulator using SDL2.
 
-### Single `main.cpp`
-We use a **single, unified `src/main.cpp`**. It delegates immediately to a device-specific `App` class.
-Each device folder contains an `App.h` file, which defines an `App` class that instantiates the `Model`, `View`, and `Controller` with the correct hardware policies for that specific target.
+### Single `main.cpp` per Device
+Each device folder contains an `App.h` and `main.cpp`. The `main.cpp` is responsible for setting up the environment. For ESP32, it creates FreeRTOS tasks (`uiTask`, `inputTask`, `logicTask`) which push/pop events from the `EventBus`.
 
 ## 3. Abstract Hardware Terminology
 
 Core logic must remain agnostic to the physical form-factor of the device.
 - Use generic terms: `Action Key`, `Power Key`, `Navigation Delta`.
-- **DO NOT** use device-specific terms in core code: e.g., avoid `Encoder Button` or `Encoder Turns` in `Controller` logic.
+- **DO NOT** use device-specific terms in core code: e.g., avoid `Encoder Button` or `Encoder Turns` in Event definitions.
 
 ## 4. Testing & Simulators
 
@@ -42,7 +42,7 @@ This project prioritizes high-speed iteration loops without requiring physical h
 
 ### Interactive Integration Test / PC Simulator (`env:run_simulator`)
 - We maintain a fully interactive SDL2-based PC Simulator.
-- It uses the exact same core `Model`, `View`, and `Controller` logic, acting as an interactive integration test.
+- It uses the exact same core `AppState`, `View`, and `AppLogic` logic, acting as an interactive integration test.
 - Command: `pio run -e run_simulator`
 - **Native Build Rules**: 
   - The native build is completely cross-platform.

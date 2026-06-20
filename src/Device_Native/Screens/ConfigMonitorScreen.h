@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "IScreen.h"
 #include <cstdio>
 
@@ -9,7 +9,7 @@ class ConfigMonitorScreen : public IScreen<DisplayPolicy> {
 public:
     ConfigMonitorScreen(const char* title, float* limitPtr) : title(title), limitPtr(limitPtr) {}
 
-    void onShow(DisplayPolicy& tft, Model& model) override {
+    void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 
         tft.setTextColor(0xFFFF, 0x0000); 
         tft.setTextSize(6);
@@ -18,18 +18,18 @@ public:
         tft.setCursor(screenW / 2 - 250, 50);
         tft.print(title);
         
-        drawLimit(tft, model);
+        drawLimit(tft, state);
     }
 
-    void onUpdate(DisplayPolicy& tft, Model& model) override {
-        drawLimit(tft, model);
+    void onUpdate(DisplayPolicy& tft, AppState& state) override {
+        drawLimit(tft, state);
     }
 
 private:
-    void drawLimit(DisplayPolicy& tft, Model& model) {
+    void drawLimit(DisplayPolicy& tft, AppState& state) {
         int screenW = tft.width();
         int screenH = tft.height();
-        tft.setTextColor(model.isEditMode ? 0xFFE0 : 0xFFFF, 0x0000); // Yellow if editing
+        tft.setTextColor(state.isEditMode ? 0xFFE0 : 0xFFFF, 0x0000); // Yellow if editing
         tft.setTextSize(10);
         tft.setCursor(screenW / 2 - 200, screenH / 2 - 80);
         char buf[16];
@@ -37,3 +37,6 @@ private:
         tft.print(buf);
     }
 };
+
+
+

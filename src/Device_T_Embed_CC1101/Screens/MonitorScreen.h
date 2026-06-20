@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "IScreen.h"
 #include <cmath>
 #include <cstdio>
@@ -9,20 +9,20 @@ class MonitorScreen : public IScreen<DisplayPolicy> {
 public:
     MonitorScreen(int monitorIndex) : mIdx(monitorIndex) {}
 
-    void onShow(DisplayPolicy& tft, Model& model) override {
+    void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 
         tft.setTextColor(0xFFFF, 0x0000); 
         tft.setTextSize(2);
         tft.setCursor(10, 10);
-        if (model.nextMonitorId > mIdx) {
-            tft.print(model.monitors[mIdx].title);
+        if (state.nextMonitorId > mIdx) {
+            tft.print(state.monitors[mIdx].title);
         } else {
             tft.print("WAIT");
         }
     }
 
-    void onUpdate(DisplayPolicy& tft, Model& model) override {
-        if (model.nextMonitorId > mIdx) {
+    void onUpdate(DisplayPolicy& tft, AppState& state) override {
+        if (state.nextMonitorId > mIdx) {
             int screenW = tft.width();
             int screenH = tft.height();
             int barH = 40;
@@ -30,10 +30,10 @@ public:
             int barX = 0;
             int maxBarW = screenW;
             
-            float* limitPtr = model.monitors[mIdx].limitPtr;
+            float* limitPtr = state.monitors[mIdx].limitPtr;
             float currentLimit = limitPtr ? *limitPtr : 1.0f;
             
-            if (model.isEditMode) {
+            if (state.isEditMode) {
                 // In edit mode, hide metrics, show only limit
                 tft.setTextColor(0xFFE0, 0x0000);
                 tft.setTextSize(3);
@@ -45,14 +45,14 @@ public:
                 // Draw a blank grey bar
                 tft.fillRect(barX, barY, maxBarW, barH, 0x7BEF);
             } else {
-                if (model.monitors[mIdx].value != Model::INVALID_VALUE) {
-                    float val = (float)model.monitors[mIdx].value * model.monitors[mIdx].multiplier;
+                if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
+                    float val = (float)state.monitors[mIdx].value * state.monitors[mIdx].multiplier;
                     
                     uint32_t color = 0x7BEF; // DARKGREY
                     if (val > 0) {
-                        color = model.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
+                        color = state.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
                     } else if (val < 0) {
-                        color = model.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
+                        color = state.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
                     }
                     
                     float absVal = std::abs(val);
@@ -69,7 +69,7 @@ public:
                     char valBuf[32];
                     
                     // Format based on decimals
-                    if (model.monitors[mIdx].decimals == 2) {
+                    if (state.monitors[mIdx].decimals == 2) {
                         snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
                     } else {
                         snprintf(valBuf, sizeof(valBuf), "   %+.1f   ", val);
@@ -83,7 +83,7 @@ public:
                     tft.setTextColor(0x7BEF, 0x0000);
                     tft.setTextSize(3);
                     tft.setCursor(screenW / 2 - 100, 50);
-                    if (model.monitors[mIdx].decimals == 2) {
+                    if (state.monitors[mIdx].decimals == 2) {
                         tft.print("   --.--   ");
                     } else {
                         tft.print("   --.-   ");
@@ -93,3 +93,6 @@ public:
         }
     }
 };
+
+
+

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <SDL2/SDL.h>
-#include "../../Model.h"
+#include "../../AppState.h"
 #include "../../View.h"
-#include "../../Controller.h"
+#include "../../AppLogic.h"
 #include "Policies/RealHWPolicy.h"
 #include "Policies/RealDisplayPolicy.h"
 #include "Policies/RealBLEPolicy.h"
@@ -14,19 +13,20 @@
 #include "Screens/ConfigMonitorScreen.h"
 
 class App {
-    Model model;
+    AppState state;
     View<RealDisplayPolicy, RealHWPolicy> appView;
-    Controller<Model, View<RealDisplayPolicy, RealHWPolicy>, RealBLEPolicy, RealHWPolicy, RealStoragePolicy> appController;
-    bool running = true;
+    AppLogic<RealBLEPolicy, RealHWPolicy, RealStoragePolicy> appLogic;
     MonitorScreen<RealDisplayPolicy> monitor0{0};
     MonitorScreen<RealDisplayPolicy> monitor1{1};
     DualMonitorScreen<RealDisplayPolicy> dualMonitor;
     DisconnectedMsgScreen<RealDisplayPolicy> disconnectedMsg;
-    ConfigMonitorScreen<RealDisplayPolicy> configSpeed{"SPEED LIMIT", &model.speedLimit};
-    ConfigMonitorScreen<RealDisplayPolicy> configTime{"TIME LIMIT", &model.timeLimit};
+    ConfigMonitorScreen<RealDisplayPolicy> configSpeed{"SPEED LIMIT", &state.speedLimit};
+    ConfigMonitorScreen<RealDisplayPolicy> configTime{"TIME LIMIT", &state.timeLimit};
+
+    bool running;
 
 public:
-    App() : appView(model), appController(model, appView) {
+    App() : appView(state), appLogic(state), running(true) {
         appView.addConnectedScreen(&monitor0);
         appView.addConnectedScreen(&monitor1);
         appView.addConnectedScreen(&dualMonitor);
@@ -37,7 +37,8 @@ public:
     }
 
     void setup() {
-        appController.setup();
+        appView.init();
+        appLogic.setup();
     }
 
     void loop() {
@@ -47,7 +48,19 @@ public:
                 running = false;
             }
         }
-        appController.loop();
+        
+        appLogic.pollInput();
+        appLogic.pollLogic();
+
+        Event e;
+        while (globalEventBus.try_pop(e)) {
+            appView.processEvent(e);
+            appLogic.processEvent(e);
+        }
+        appView.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+        appLogic.processEvent(Event{EventType::SYS_TICK, 0, 0, 0});
+        
+        SDL_Delay(25);
     }
 
     bool isRunning() {

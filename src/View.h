@@ -1,21 +1,24 @@
 #pragma once
 
-#include "Model.h"
+#include "AppState.h"
 #include <cmath>
 #include <vector>
 #include "IScreen.h"
+#include "Device_All/EventBus.h"
 
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
 public:
-    View(Model& m) : model(m), displayStarted(false), lastScreenIndex(-1), lastEditMode(false), lastConnected(false) {}
+    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastEditMode(false), lastConnected(false) {}
 
     void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
         connectedScreens.push_back(screen);
+        state.numConnectedScreens = connectedScreens.size();
     }
 
     void addDisconnectedScreen(IScreen<DisplayPolicy>* screen) {
         disconnectedScreens.push_back(screen);
+        state.numDisconnectedScreens = disconnectedScreens.size();
     }
 
     int getNumConnectedScreens() const {
@@ -38,22 +41,69 @@ public:
         tft.setTextSize(2);
     }
     
-    void update() {
-        int currentIdx = model.isConnected ? model.currentScreenIndex : model.disconnectedScreenIndex;
-        IScreen<DisplayPolicy>* activeScreen = model.isConnected ? connectedScreens[currentIdx] : disconnectedScreens[currentIdx];
+    void processEvent(const Event& e) {
+        switch (e.type) {
+            case EventType::UI_UPDATE:
+                update();
+                break;
+            case EventType::UI_SHOW_CONNECTED:
+                displayStarted = false; 
+                showMessage("BLE connected!", 0x001F, 0x0000); 
+                break;
+            case EventType::UI_SHOW_DISCONNECTED:
+                showMessage("No BLE connection!", 0xFFFF, 0xF800); 
+                break;
+            case EventType::UI_SHOW_CONFIGURING:
+                tft.setTextColor(0xD69A, 0x0000); 
+                tft.print("Configuring... ");
+                break;
+            case EventType::UI_SHOW_CONFIG_DONE:
+                tft.setTextColor(0xD69A, 0x0000);
+                tft.println("Done");
+                break;
+            case EventType::UI_SHOW_CONFIG_FAIL:
+                tft.setTextColor(0xF800, 0x0000); 
+                tft.println("Fail");
+                break;
+            case EventType::UI_SHOW_POWER_OFF:
+                tft.fillScreen(0x0000); 
+                tft.setTextColor(0xFFFF, 0x0000); 
+                tft.setCursor(tft.width() / 2 - 60, tft.height() / 2 - 10);
+                tft.print("Powering off...");
+                break;
+            case EventType::UI_SHOW_EXCEPTION:
+                tft.setTextColor(0xF800, 0x0000); 
+                tft.println("");
+                tft.print(e.arg1);
+                tft.print(" exception");
+                tft.println("");
+                break;
+            default:
+                break;
+        }
+    }
+    
+    void setBacklight(bool on) {
+        tft.setBacklight(on);
+    }
 
-        if (!displayStarted || lastScreenIndex != currentIdx || lastEditMode != model.isEditMode || lastConnected != model.isConnected) {
+private:
+    void update() {
+        int currentIdx = state.isConnected ? state.currentScreenIndex : state.disconnectedScreenIndex;
+        IScreen<DisplayPolicy>* activeScreen = state.isConnected ? connectedScreens[currentIdx] : disconnectedScreens[currentIdx];
+
+        if (!displayStarted || lastScreenIndex != currentIdx || lastEditMode != state.isEditMode || lastConnected != state.isConnected) {
             displayStarted = true;
             lastScreenIndex = currentIdx;
-            lastEditMode = model.isEditMode;
-            lastConnected = model.isConnected;
+            lastEditMode = state.isEditMode;
+            lastConnected = state.isConnected;
             
-            activeScreen->onShow(tft, model);
-            tft.drawBattery(model.batteryPercent, true);
+            activeScreen->onShow(tft, state);
+            tft.drawBattery(state.batteryPercent, true);
         }
         
-        activeScreen->onUpdate(tft, model);
-        tft.drawBattery(model.batteryPercent, false);
+        activeScreen->onUpdate(tft, state);
+        tft.drawBattery(state.batteryPercent, false);
         tft.flush();
     }
     
@@ -63,46 +113,7 @@ public:
         tft.setTextColor(color, bg);
         tft.println(msg);
     }
-
-    void showConnected() {
-        displayStarted = false; 
-        showMessage("BLE connected!", 0x001F, 0x0000); 
-    }
-    void showDisconnected() {
-        showMessage("No BLE connection!", 0xFFFF, 0xF800); 
-    }
-    void showConfiguring() {
-        tft.setTextColor(0xD69A, 0x0000); 
-        tft.print("Configuring... ");
-    }
-    void showConfigDone() {
-        tft.setTextColor(0xD69A, 0x0000);
-        tft.println("Done");
-    }
-    void showConfigFail() {
-        tft.setTextColor(0xF800, 0x0000); 
-        tft.println("Fail");
-    }
-    void showPowerOff() {
-        tft.fillScreen(0x0000); 
-        tft.setTextColor(0xFFFF, 0x0000); 
-        tft.setCursor(tft.width() / 2 - 60, tft.height() / 2 - 10);
-        tft.print("Powering off...");
-    }
-    void showException(int monitorId, const char* msg) {
-        tft.setTextColor(0xF800, 0x0000); 
-        tft.println("");
-        tft.print(monitorId);
-        tft.print(" ");
-        tft.println(msg);
-    }
-    
-    void setBacklight(bool on) {
-        tft.setBacklight(on);
-    }
-
-private:
-    Model& model;
+    AppState& state;
     DisplayPolicy tft;
     bool displayStarted;
     int lastScreenIndex;
@@ -112,3 +123,4 @@ private:
     std::vector<IScreen<DisplayPolicy>*> connectedScreens;
     std::vector<IScreen<DisplayPolicy>*> disconnectedScreens;
 };
+
