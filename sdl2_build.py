@@ -14,9 +14,9 @@ else:
 
 env.AddCustomTarget(
     name="run",
-    dependencies="$BUILD_DIR/${PROGNAME}",
+    dependencies="$BUILD_DIR/${PROGNAME}${PROGSUFFIX}",
     actions=[
-        '"$BUILD_DIR/${PROGNAME}"'
+        '"$BUILD_DIR/${PROGNAME}${PROGSUFFIX}"'
     ],
     title="Run Simulator",
     description="Run the native SDL2 simulator"
