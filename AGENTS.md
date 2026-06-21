@@ -35,9 +35,9 @@ Core logic must remain agnostic to the physical form-factor of the device.
 
 This project prioritizes high-speed iteration loops without requiring physical hardware flashing.
 
-### Unit Tests (`env:mock`)
+### Unit Tests (`env:unit_tests`)
 - We run unit tests natively on the PC using PlatformIO's `unity` framework.
-- Command: `pio test -e mock`
+- Command: `pio test -e unit_tests`
 - Tests run instantly because they use `MockHWPolicy`, `MockDisplayPolicy`, etc., from `Device_Mock`.
 
 ### Interactive Integration Test / PC Simulator (`env:run_simulator`)
