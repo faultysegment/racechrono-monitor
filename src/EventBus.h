@@ -33,11 +33,14 @@ enum class EventType {
     UI_SHOW_EXCEPTION
 };
 
+#include <string>
+
 struct Event {
     EventType type;
     int32_t arg1;
     int32_t arg2;
     float f_arg;
+    std::string str_arg;
 };
 
 class EventBus {

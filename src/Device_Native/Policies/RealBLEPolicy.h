@@ -1,16 +1,16 @@
 #pragma once
-#include "BLEPolicyCallback.h"
+#include "../../EventBus.h"
 #include <SDL2/SDL.h>
 #include <string>
 
 class RealBLEPolicy {
-    BLEPolicyCallback* ctrl = nullptr;
+    EventBus* bus = nullptr;
     bool connected = false;
     bool indicating = false;
     uint32_t lastDataTime = 0;
 
     void sendDummyData() {
-        if (!ctrl) return;
+        if (!bus) return;
         
         // Send random dummy data so that visual value is between 0.1 and 0.2
         // Monitor 0 (Time) multiplier is 0.01 -> raw 10 to 20
@@ -34,12 +34,13 @@ class RealBLEPolicy {
         rxData[8] = (speedVal >> 8) & 0xFF;
         rxData[9] = speedVal & 0xFF;
 
-        ctrl->onNotificationWrite(std::string((char*)rxData, 10));
+        Event e{EventType::BLE_MONITOR_UPDATE, 0, 0, 0, std::string((char*)rxData, 10)};
+        bus->push(e);
     }
 
 public:
-    void init(const char* name, BLEPolicyCallback* controller) {
-        ctrl = controller;
+    void init(const char* name, EventBus* b) {
+        bus = b;
     }
 
     void startAdvertising() {}
@@ -52,8 +53,8 @@ public:
         if (state[SDL_SCANCODE_RETURN] && !enterPressed) {
             connected = !connected;
             enterPressed = true;
-            if (!connected && ctrl) {
-                ctrl->onBLEDisconnected();
+            if (!connected && bus) {
+                bus->push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
             }
         } else if (!state[SDL_SCANCODE_RETURN]) {
             enterPressed = false;
@@ -77,9 +78,10 @@ public:
 
     void indicateConfig(uint8_t* data, size_t len) {
         // Simulate immediate successful config write response
-        if (ctrl) {
+        if (bus) {
             uint8_t rx[2] = {0, (uint8_t)data[1]}; // CMD_RESULT_OK
-            ctrl->onConfigWrite(std::string((char*)rx, 2));
+            Event e{EventType::BLE_CONFIG_MONITOR, 0, 0, 0, std::string((char*)rx, 2)};
+            bus->push(e);
         }
     }
 };

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <vector>
 #include "IScreen.h"
-#include "Device_All/EventBus.h"
+#include "EventBus.h"
 
 template <typename DisplayPolicy, typename HWPolicy>
 class View {

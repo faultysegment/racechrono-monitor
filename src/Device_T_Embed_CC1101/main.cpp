@@ -5,9 +5,14 @@
 #include <BLEDevice.h>
 #include <Preferences.h>
 
-#include "App.h"
+#include "Policies/RealDisplayPolicy.h"
+#include "Policies/RealHWPolicy.h"
+#include "Policies/RealBLEPolicy.h"
+#include "Policies/RealStoragePolicy.h"
+#include "../App.h"
+#include "Policies/TEmbedViewPolicy.h"
 
-App app;
+App<RealDisplayPolicy, RealHWPolicy, RealBLEPolicy, RealStoragePolicy, TEmbedViewPolicy<RealDisplayPolicy>> app;
 
 void uiTask(void* pvParameters) {
     Event e;
