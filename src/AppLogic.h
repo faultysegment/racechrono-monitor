@@ -1,8 +1,7 @@
 #pragma once
 
 #include "AppState.h"
-#include "BLEPolicyCallback.h"
-#include "Device_All/EventBus.h"
+#include "EventBus.h"
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -22,7 +21,7 @@
 #define MAX_PAYLOAD_PART 17
 
 template <typename BLEPolicy, typename HWPolicy, typename StoragePolicy>
-class AppLogic : public BLEPolicyCallback {
+class AppLogic {
     AppState& state;
     EventBus& bus;
     BLEPolicy ble;
@@ -194,7 +193,11 @@ public:
                 break;
 
             case EventType::BLE_MONITOR_UPDATE:
-                state.setMonitorValue(e.arg1, e.arg2);
+                if (!e.str_arg.empty()) {
+                    handleMonitorData(e.str_arg);
+                } else {
+                    state.setMonitorValue(e.arg1, e.arg2);
+                }
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
@@ -204,13 +207,19 @@ public:
                 break;
 
             case EventType::BLE_CONFIG_MONITOR:
-                state.isConfiguring = true;
-                bus.push(Event{EventType::UI_SHOW_CONFIGURING, 0, 0, 0});
-                if (configureMonitors()) {
-                    bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
-                    state.isConfigured = true;
+                if (e.str_arg.empty()) {
+                    // Start configuring
+                    state.isConfiguring = true;
+                    bus.push(Event{EventType::UI_SHOW_CONFIGURING, 0, 0, 0});
+                    if (configureMonitors()) {
+                        bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
+                        state.isConfigured = true;
+                    } else {
+                        bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
+                    }
                 } else {
-                    bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
+                    // Process response
+                    handleConfigData(e.str_arg);
                 }
                 break;
 
@@ -227,11 +236,8 @@ public:
         }
     }
 
-    // BLE Callbacks (Running in BLE Context/Thread)
-    void onBLEConnected() override {} // Handled via polling connectedCount
-    void onBLEDisconnected() override {} // Handled via polling
-
-    void onConfigWrite(std::string rxData) override {
+private:
+    void handleConfigData(const std::string& rxData) {
         const uint8_t* data = (const uint8_t*)rxData.data();
         if (rxData.length() >= 1) {
             int result = data[0];
@@ -247,7 +253,7 @@ public:
         }
     }
 
-    void onNotificationWrite(std::string rxData) override {
+    void handleMonitorData(const std::string& rxData) {
         const uint8_t* data = (const uint8_t*)rxData.data();
         int len = rxData.length();
         int dataPos = 0;
@@ -259,19 +265,18 @@ public:
                                 (uint32_t)data[dataPos + 4];
             int32_t value;
             memcpy(&value, &raw_val, sizeof(value));
-            bus.push(Event{EventType::BLE_MONITOR_UPDATE, monitorId, value, 0.0f});
+            state.setMonitorValue(monitorId, value);
             dataPos += 5;
         }
     }
 
-private:
     void bluetoothStart() {
         uint8_t mac[6];
         HWPolicy::getMacDefault(mac);
         char name[255];
         snprintf(name, sizeof(name), "RC DIY #%02X%02X", mac[4], mac[5]);
         
-        ble.init(name, this);
+        ble.init("RaceChrono Monitor", &bus);
         ble.startAdvertising();
     }
 

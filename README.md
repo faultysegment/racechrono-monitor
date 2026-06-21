@@ -8,10 +8,10 @@ This project acts as an external monitor for RaceChrono, fetching and displaying
 
 It features a TFT display, a navigation interface for changing menus and configuring limits, and relies on a clean, decoupled architecture.
 
-## Clean Architecture
-The project employs a robust, highly-decoupled architecture using C++ templates (Policy Injection). The core business logic (`Model`, `View`, `Controller`) is completely hardware-agnostic and relies entirely on injected hardware policies.
+## Event-Driven Architecture
+The project employs a robust, highly-decoupled architecture utilizing an **EventBus** and C++ templates (Policy Injection). The core business logic (`AppState`, `View`, `AppLogic`) is completely hardware-agnostic and relies entirely on injected hardware policies.
 
-Because of this architecture, the project has a single unified `src/main.cpp` and splits implementations into specialized device folders:
+Because of this architecture, the project cleanly splits implementations into specialized device folders, each with its own `main.cpp` and `App.h`:
 - **`Device_T_Embed_CC1101`**: Real hardware implementation using `TFT_eSPI`, ESP32 BLE, and GPIO interrupts.
 - **`Device_Mock`**: Pure software mocks used exclusively for blazing fast native unit tests.
 - **`Device_Native`**: A fully functional PC-based simulator that renders the UI in a desktop window using SDL2.
@@ -28,12 +28,12 @@ Because of this architecture, the project has a single unified `src/main.cpp` an
    pio run -e T_Embed_CC1101 -t upload
    ```
 
-## Running Unit Tests (Mock)
+## Running Unit Tests (`unit_tests`)
 
-To run the full suite of native unit tests (testing the core MVC logic without hardware):
+To run the full suite of native unit tests (testing the core event logic without hardware):
 
 ```bash
-pio test -e mock
+pio test -e unit_tests
 ```
 This builds and runs tests on your host machine instantly using `Unity` and the policies from `Device_Mock`.
 
@@ -43,7 +43,7 @@ You can launch a fully working simulator of the device directly on your PC. The 
 
 > [!TIP]
 > **Interactive Integration Test**
-> Beyond just UI prototyping, the PC simulator acts as a full-fledged integration test. Since it runs the exact same `Controller`, `Model`, and `View` logic as the real firmware, it allows you to test application flows, state transitions, and BLE mocked interactions natively on your host machine without deploying to hardware!
+> Beyond just UI prototyping, the PC simulator acts as a full-fledged integration test. Since it runs the exact same `AppLogic`, `AppState`, and `View` logic as the real firmware, it allows you to test application flows, state transitions, and BLE mocked interactions natively on your host machine without deploying to hardware!
 
 ### Key Bindings
 - **Spacebar**: Action Key (Select / Enter Edit Mode)

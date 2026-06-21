@@ -2,15 +2,12 @@
 #include "../../src/AppState.h"
 #include "../../src/View.h"
 #include "../../src/AppLogic.h"
-#include "../../src/Device_All/EventBus.h"
+#include "../../src/EventBus.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Mock/Policies/MockBLEPolicy.h"
 #include "../../src/Device_Mock/Policies/MockStoragePolicy.h"
-#include "../../src/Device_T_Embed_CC1101/Screens/MonitorScreen.h"
-#include "../../src/Device_T_Embed_CC1101/Screens/DualMonitorScreen.h"
-#include "../../src/Device_T_Embed_CC1101/Screens/DisconnectedMsgScreen.h"
-#include "../../src/Device_T_Embed_CC1101/Screens/ConfigMonitorScreen.h"
+#include "../../src/Device_Native/Policies/NativeViewPolicy.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -18,12 +15,7 @@
 AppState state;
 View<MockDisplayPolicy, MockHWPolicy> view(state);
 
-MonitorScreen<MockDisplayPolicy> monitorScreen0(0);
-MonitorScreen<MockDisplayPolicy> monitorScreen1(1);
-DualMonitorScreen<MockDisplayPolicy> dualMonitorScreen;
-DisconnectedMsgScreen<MockDisplayPolicy> disconnectedMsgScreen;
-ConfigMonitorScreen<MockDisplayPolicy> configSpeedScreen("SPEED LIMIT", &state.speedLimit);
-ConfigMonitorScreen<MockDisplayPolicy> configTimeScreen("TIME LIMIT", &state.timeLimit);
+NativeViewPolicy<MockDisplayPolicy> viewPolicy(state);
 using TestAppLogic = AppLogic<MockBLEPolicy, MockHWPolicy, MockStoragePolicy>;
 
 EventBus testBus;
@@ -49,13 +41,7 @@ void setUp(void) {
     while(testBus.try_pop(e)) {}
 
     if (view.getNumConnectedScreens() == 0) {
-        view.addConnectedScreen(&monitorScreen0);
-        view.addConnectedScreen(&monitorScreen1);
-        view.addConnectedScreen(&dualMonitorScreen);
-        
-        view.addDisconnectedScreen(&disconnectedMsgScreen);
-        view.addDisconnectedScreen(&configSpeedScreen);
-        view.addDisconnectedScreen(&configTimeScreen);
+        viewPolicy.setupScreens(view);
     }
 }
 

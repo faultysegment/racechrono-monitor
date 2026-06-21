@@ -3,42 +3,52 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
-#include "BLEPolicyCallback.h"
+#include "../../EventBus.h"
 
 class RealBLEPolicy {
     BLEServer* pServer;
     BLECharacteristic* pMonitorConfigChr;
     BLECharacteristic* pMonitorNotificationChr;
-    BLEPolicyCallback* ctrl;
+    EventBus* bus;
 
     class MyServerCallbacks: public BLEServerCallbacks {
-        BLEPolicyCallback* c;
+        EventBus* bus;
     public:
-        MyServerCallbacks(BLEPolicyCallback* c) : c(c) {}
-        void onConnect(BLEServer* pServer) {}
-        void onDisconnect(BLEServer* pServer) { c->onBLEDisconnected(); }
+        MyServerCallbacks(EventBus* bus) : bus(bus) {}
+        void onConnect(BLEServer* pServer) {
+            bus->push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+        }
+        void onDisconnect(BLEServer* pServer) {
+            bus->push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
+        }
     };
 
     class ConfigCallbacks: public BLECharacteristicCallbacks {
-        BLEPolicyCallback* c;
+        EventBus* bus;
     public:
-        ConfigCallbacks(BLEPolicyCallback* c) : c(c) {}
-        void onWrite(BLECharacteristic* pChr) { c->onConfigWrite(pChr->getValue()); }
+        ConfigCallbacks(EventBus* bus) : bus(bus) {}
+        void onWrite(BLECharacteristic* pChr) {
+            Event e{EventType::BLE_CONFIG_MONITOR, 0, 0, 0, pChr->getValue()};
+            bus->push(e);
+        }
     };
 
     class NotificationCallbacks: public BLECharacteristicCallbacks {
-        BLEPolicyCallback* c;
+        EventBus* bus;
     public:
-        NotificationCallbacks(BLEPolicyCallback* c) : c(c) {}
-        void onWrite(BLECharacteristic* pChr) { c->onNotificationWrite(pChr->getValue()); }
+        NotificationCallbacks(EventBus* bus) : bus(bus) {}
+        void onWrite(BLECharacteristic* pChr) {
+            Event e{EventType::BLE_MONITOR_UPDATE, 0, 0, 0, pChr->getValue()};
+            bus->push(e);
+        }
     };
 
 public:
-    void init(const char* name, BLEPolicyCallback* controller) {
-        ctrl = controller;
+    void init(const char* name, EventBus* b) {
+        bus = b;
         BLEDevice::init(name);
         pServer = BLEDevice::createServer();
-        pServer->setCallbacks(new MyServerCallbacks(ctrl));
+        pServer->setCallbacks(new MyServerCallbacks(bus));
 
         BLEService *pService = pServer->createService(BLEUUID((uint16_t)0x1ff8));
 
@@ -48,13 +58,13 @@ public:
                                 BLECharacteristic::PROPERTY_INDICATE
                             );
         pMonitorConfigChr->addDescriptor(new BLE2902());
-        pMonitorConfigChr->setCallbacks(new ConfigCallbacks(ctrl));
+        pMonitorConfigChr->setCallbacks(new ConfigCallbacks(bus));
 
         pMonitorNotificationChr = pService->createCharacteristic(
                                 BLEUUID((uint16_t)0x0006),
                                 BLECharacteristic::PROPERTY_WRITE_NR
                             );
-        pMonitorNotificationChr->setCallbacks(new NotificationCallbacks(ctrl));
+        pMonitorNotificationChr->setCallbacks(new NotificationCallbacks(bus));
 
         pService->start();
 
