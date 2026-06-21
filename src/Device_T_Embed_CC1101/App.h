@@ -14,6 +14,7 @@
 
 class App {
     AppState state;
+    EventBus eventBus;
     View<RealDisplayPolicy, RealHWPolicy> appView;
     AppLogic<RealBLEPolicy, RealHWPolicy, RealStoragePolicy> appLogic;
     MonitorScreen<RealDisplayPolicy> monitor0{0};
@@ -24,7 +25,7 @@ class App {
     ConfigMonitorScreen<RealDisplayPolicy> configTime{"TIME LIMIT", &state.timeLimit};
 
 public:
-    App() : appView(state), appLogic(state) {
+    App() : appView(state), appLogic(state, eventBus) {
         appView.addConnectedScreen(&monitor0);
         appView.addConnectedScreen(&monitor1);
         appView.addConnectedScreen(&dualMonitor);
@@ -58,5 +59,9 @@ public:
 
     bool isRunning() {
         return true;
+    }
+
+    EventBus& getEventBus() {
+        return eventBus;
     }
 };

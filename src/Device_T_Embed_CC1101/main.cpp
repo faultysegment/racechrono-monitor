@@ -12,7 +12,7 @@ App app;
 void uiTask(void* pvParameters) {
     Event e;
     while (1) {
-        if (globalEventBus.pop_with_timeout(e, 25)) {
+        if (app.getEventBus().pop_with_timeout(e, 25)) {
             app.processEvent(e);
         } else {
             app.tickUI();

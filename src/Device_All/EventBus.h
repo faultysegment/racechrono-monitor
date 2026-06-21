@@ -77,5 +77,3 @@ public:
         return true;
     }
 };
-
-extern EventBus globalEventBus;

@@ -26,11 +26,12 @@ ConfigMonitorScreen<MockDisplayPolicy> configSpeedScreen("SPEED LIMIT", &state.s
 ConfigMonitorScreen<MockDisplayPolicy> configTimeScreen("TIME LIMIT", &state.timeLimit);
 using TestAppLogic = AppLogic<MockBLEPolicy, MockHWPolicy, MockStoragePolicy>;
 
-TestAppLogic logic(state);
+EventBus testBus;
+TestAppLogic logic(state, testBus);
 
 void flushEvents() {
     Event e;
-    while(globalEventBus.try_pop(e)) {
+    while(testBus.try_pop(e)) {
         view.processEvent(e);
         logic.processEvent(e);
     }
@@ -45,7 +46,7 @@ void setUp(void) {
 
     // flush queue
     Event e;
-    while(globalEventBus.try_pop(e)) {}
+    while(testBus.try_pop(e)) {}
 
     if (view.getNumConnectedScreens() == 0) {
         view.addConnectedScreen(&monitorScreen0);
@@ -62,7 +63,7 @@ void tearDown(void) {}
 
 void test_applogic_ble_connect(void) {
     logic.setup();
-    globalEventBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+    testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("BLE connected!") != std::string::npos);
 }

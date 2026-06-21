@@ -54,21 +54,39 @@ void test_view_show_disconnected(void) {
 void test_view_update_bars(void) {
     state.isConnected = true;
     state.speedLimit = 5.0f;
-    state.timeLimit = 0.1f;
+    state.timeLimit = 10.0f;
     state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
     state.addMonitor("M2", 1.0f, "SPEED", true, 1, &state.speedLimit);
-    state.setMonitorValue(0, 10);
-    state.setMonitorValue(1, -5);
+    state.setMonitorValue(0, 5); // 5 / 10 = 50%
+    state.setMonitorValue(1, 2); // 2 / 5 = 40%
     
     // Test screen 0 (Time)
     state.currentScreenIndex = 0;
+    MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+5.00") != std::string::npos);
+    TEST_ASSERT_EQUAL(2, MockDisplayPolicy::lastRects.size());
+    if (MockDisplayPolicy::lastRects.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastRects[0].color); // Time positive is bad
+        TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[0].w); // 50% of 320
+        TEST_ASSERT_EQUAL(TFT_DARKGREY, MockDisplayPolicy::lastRects[1].color);
+        TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[1].w);
+    }
 
     // Test screen 1 (Speed)
     state.currentScreenIndex = 1;
+    MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+2.0") != std::string::npos);
+    TEST_ASSERT_EQUAL(2, MockDisplayPolicy::lastRects.size());
+    if (MockDisplayPolicy::lastRects.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_GREEN, MockDisplayPolicy::lastRects[0].color); // Speed positive is good
+        TEST_ASSERT_EQUAL(128, MockDisplayPolicy::lastRects[0].w); // 40% of 320
+        TEST_ASSERT_EQUAL(TFT_DARKGREY, MockDisplayPolicy::lastRects[1].color);
+        TEST_ASSERT_EQUAL(192, MockDisplayPolicy::lastRects[1].w); // 320 - 128
+    }
 }
 
 #ifdef ARDUINO

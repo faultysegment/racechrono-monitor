@@ -14,6 +14,7 @@
 
 class App {
     AppState state;
+    EventBus eventBus;
     View<RealDisplayPolicy, RealHWPolicy> appView;
     AppLogic<RealBLEPolicy, RealHWPolicy, RealStoragePolicy> appLogic;
     MonitorScreen<RealDisplayPolicy> monitor0{0};
@@ -26,7 +27,7 @@ class App {
     bool running;
 
 public:
-    App() : appView(state), appLogic(state), running(true) {
+    App() : appView(state), appLogic(state, eventBus), running(true) {
         appView.addConnectedScreen(&monitor0);
         appView.addConnectedScreen(&monitor1);
         appView.addConnectedScreen(&dualMonitor);
@@ -53,7 +54,7 @@ public:
         appLogic.pollLogic();
 
         Event e;
-        while (globalEventBus.try_pop(e)) {
+        while (eventBus.try_pop(e)) {
             appView.processEvent(e);
             appLogic.processEvent(e);
         }

@@ -24,13 +24,14 @@
 template <typename BLEPolicy, typename HWPolicy, typename StoragePolicy>
 class AppLogic : public BLEPolicyCallback {
     AppState& state;
+    EventBus& bus;
     BLEPolicy ble;
 
     bool wasConnected;
 
 public:
-    AppLogic(AppState& s) : 
-        state(s), wasConnected(true) {
+    AppLogic(AppState& s, EventBus& b) : 
+        state(s), bus(b), wasConnected(true) {
     }
     
     void setup() {
@@ -53,14 +54,14 @@ public:
             if (!buttonPressed) {
                 buttonPressed = true;
                 buttonPressStartTime = HWPolicy::millis();
-                globalEventBus.push(Event{EventType::HW_PWR_BTN_PRESS, 0, 0, 0});
+                bus.push(Event{EventType::HW_PWR_BTN_PRESS, 0, 0, 0});
             } else if (HWPolicy::millis() - buttonPressStartTime >= 3000) {
-                globalEventBus.push(Event{EventType::HW_PWR_BTN_LONG_PRESS, 0, 0, 0});
+                bus.push(Event{EventType::HW_PWR_BTN_LONG_PRESS, 0, 0, 0});
                 buttonPressed = false; // Prevent repeated triggers
             }
         } else {
             if (buttonPressed) {
-                globalEventBus.push(Event{EventType::HW_PWR_BTN_RELEASE, 0, 0, 0});
+                bus.push(Event{EventType::HW_PWR_BTN_RELEASE, 0, 0, 0});
             }
             buttonPressed = false;
         }
@@ -71,16 +72,16 @@ public:
         
         if (!lastActionBtn && actionBtn) { // Pressed
             actionBtnPressTime = HWPolicy::millis();
-            globalEventBus.push(Event{EventType::HW_ACTION_BTN_PRESS, 0, 0, 0});
+            bus.push(Event{EventType::HW_ACTION_BTN_PRESS, 0, 0, 0});
         } else if (lastActionBtn && !actionBtn) { // Released
             uint32_t duration = HWPolicy::millis() - actionBtnPressTime;
-            globalEventBus.push(Event{EventType::HW_ACTION_BTN_RELEASE, (int32_t)duration, 0, 0});
+            bus.push(Event{EventType::HW_ACTION_BTN_RELEASE, (int32_t)duration, 0, 0});
         }
         lastActionBtn = actionBtn;
 
         int navDelta = HWPolicy::getNavigationDelta();
         if (navDelta != 0) {
-            globalEventBus.push(Event{EventType::HW_NAV_DELTA, navDelta, 0, 0});
+            bus.push(Event{EventType::HW_NAV_DELTA, navDelta, 0, 0});
         }
     }
 
@@ -89,22 +90,22 @@ public:
         if (wasConnected != isConnected) {
             wasConnected = isConnected;
             if (isConnected) {
-                globalEventBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+                bus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
             } else {
-                globalEventBus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
+                bus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
             }
         }
 
         static uint32_t lastBatteryUpdate = 0;
         if (HWPolicy::millis() - lastBatteryUpdate > 5000) {
-            globalEventBus.push(Event{EventType::SYS_BATTERY_UPDATE, HWPolicy::getBatteryPercent(), 0, 0});
+            bus.push(Event{EventType::SYS_BATTERY_UPDATE, HWPolicy::getBatteryPercent(), 0, 0});
             lastBatteryUpdate = HWPolicy::millis();
         }
         
         // Configuration state machine tick
         if (isConnected && !state.isConfiguring && !state.isConfigured) {
             if (ble.isConfigIndicating()) {
-                globalEventBus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
+                bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
             }
         }
     }
@@ -112,7 +113,7 @@ public:
     void processEvent(const Event& e) {
         switch (e.type) {
             case EventType::HW_PWR_BTN_LONG_PRESS:
-                globalEventBus.push(Event{EventType::UI_SHOW_POWER_OFF, 0, 0, 0});
+                bus.push(Event{EventType::UI_SHOW_POWER_OFF, 0, 0, 0});
                 HWPolicy::delay(500); 
                 HWPolicy::powerOffBoard();
                 break;
@@ -125,7 +126,7 @@ public:
                         StoragePolicy::putFloat("limit_speed", state.speedLimit);
                         StoragePolicy::putFloat("limit_time", state.timeLimit);
                     }
-                    globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 }
                 break;
             }
@@ -172,52 +173,52 @@ public:
                         }
                     }
                 }
-                globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
             }
 
             case EventType::BLE_CONNECTED:
                 state.isConnected = true;
                 state.reset();
-                globalEventBus.push(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
+                bus.push(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
                 break;
 
             case EventType::BLE_DISCONNECTED:
                 state.isConnected = false;
-                globalEventBus.push(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
+                bus.push(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
                 ble.startAdvertising();
                 break;
 
             case EventType::BLE_EXCEPTION:
-                globalEventBus.push(Event{EventType::UI_SHOW_EXCEPTION, e.arg1, 0, 0});
+                bus.push(Event{EventType::UI_SHOW_EXCEPTION, e.arg1, 0, 0});
                 break;
 
             case EventType::BLE_MONITOR_UPDATE:
                 state.setMonitorValue(e.arg1, e.arg2);
-                globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
             case EventType::SYS_BATTERY_UPDATE:
                 state.batteryPercent = e.arg1;
-                globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
             case EventType::BLE_CONFIG_MONITOR:
                 state.isConfiguring = true;
-                globalEventBus.push(Event{EventType::UI_SHOW_CONFIGURING, 0, 0, 0});
+                bus.push(Event{EventType::UI_SHOW_CONFIGURING, 0, 0, 0});
                 if (configureMonitors()) {
-                    globalEventBus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
+                    bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
                     state.isConfigured = true;
                 } else {
-                    globalEventBus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
+                    bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
                 }
                 break;
 
             case EventType::SYS_TICK:
                 if (state.isConnected && state.isConfigured) {
-                    globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 } else if (!state.isConnected) {
-                    globalEventBus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 }
                 break;
 
@@ -238,7 +239,7 @@ public:
             switch (result) {
                 case CMD_RESULT_PAYLOAD_OUT_OF_SEQUENCE:
                 case CMD_RESULT_EQUATION_EXCEPTION:
-                    globalEventBus.push(Event{EventType::BLE_EXCEPTION, monitorId, 0, 0});
+                    bus.push(Event{EventType::BLE_EXCEPTION, monitorId, 0, 0});
                     break;
                 default:
                     break;
@@ -258,7 +259,7 @@ public:
                                 (uint32_t)data[dataPos + 4];
             int32_t value;
             memcpy(&value, &raw_val, sizeof(value));
-            globalEventBus.push(Event{EventType::BLE_MONITOR_UPDATE, monitorId, value, 0.0f});
+            bus.push(Event{EventType::BLE_MONITOR_UPDATE, monitorId, value, 0.0f});
             dataPos += 5;
         }
     }
