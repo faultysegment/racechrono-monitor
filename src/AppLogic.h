@@ -188,9 +188,6 @@ public:
                 ble.startAdvertising();
                 break;
 
-            case EventType::BLE_EXCEPTION:
-                bus.push(Event{EventType::UI_SHOW_EXCEPTION, e.arg1, 0, 0});
-                break;
 
             case EventType::BLE_MONITOR_UPDATE:
                 if (!e.str_arg.empty()) {
@@ -243,11 +240,9 @@ private:
             int result = data[0];
             int monitorId = rxData.length() >= 2 ? data[1] : 0;
             switch (result) {
-                case CMD_RESULT_PAYLOAD_OUT_OF_SEQUENCE:
                 case CMD_RESULT_EQUATION_EXCEPTION:
-                    bus.push(Event{EventType::BLE_EXCEPTION, monitorId, 0, 0});
+                    state.setMonitorException(monitorId, true);
                     break;
-                default:
                     break;
             }
         }

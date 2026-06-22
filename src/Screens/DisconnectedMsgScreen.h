@@ -11,12 +11,7 @@ public:
         ui.begin();
         ui.setCursorY(0.4f);
         
-        // Use textCenter but we want red background
-        tft.setTextColor(0xFFFF, 0xF800); 
-        tft.setTextSize(ui.textSize(0.12f));
-        int nudgeLeft = ui.w(0.25f);
-        tft.setCursor(ui.w(0.5f) - nudgeLeft, ui.getCursorY());
-        tft.print("No BLE connection!");
+        ui.textCenter("Disconnected", 0xFFFF, 0.12f, 0.0f, 0xF800);
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {}

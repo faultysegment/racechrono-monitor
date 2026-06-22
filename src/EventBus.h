@@ -18,7 +18,6 @@ enum class EventType {
     BLE_DISCONNECTED,
     BLE_CONFIG_MONITOR,
     BLE_MONITOR_UPDATE,
-    BLE_EXCEPTION,
 
     SYS_BATTERY_UPDATE,
     SYS_TICK,
@@ -29,8 +28,7 @@ enum class EventType {
     UI_SHOW_CONFIGURING,
     UI_SHOW_CONFIG_DONE,
     UI_SHOW_CONFIG_FAIL,
-    UI_SHOW_POWER_OFF,
-    UI_SHOW_EXCEPTION
+    UI_SHOW_POWER_OFF
 };
 
 #include <string>

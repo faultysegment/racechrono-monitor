@@ -63,6 +63,10 @@ struct RealHWPolicy {
 
     static void powerOffBoard() {
         ::digitalWrite(15, LOW); // BOARD_PWR_EN
+        // Wait until the user releases the button, otherwise it immediately wakes up from deep sleep
+        while (::digitalRead(6) == LOW) {
+            ::delay(50);
+        }
         esp_sleep_enable_ext0_wakeup((gpio_num_t)6, LOW); // BOARD_USER_KEY
         esp_deep_sleep_start();
     }

@@ -45,13 +45,14 @@ public:
         cursorY += h(percentY);
     }
 
-    void textCenter(const char* str, uint32_t color, float sizePercent, float offsetXPercent = 0.0f) {
-        tft.setTextColor(color, 0x0000);
+    void textCenter(const char* str, uint32_t color, float sizePercent, float offsetXPercent = 0.0f, uint32_t bg = 0x0000) {
+        tft.setTextColor(color, bg);
         tft.setTextSize(textSize(sizePercent));
         
-        // Approximate centering since we lack text bounds in mocks
-        int nudgeLeft = w(0.25f); 
-        tft.setCursor(w(0.5f) - nudgeLeft + w(offsetXPercent), cursorY);
+        int strW = tft.textWidth(str);
+        int strCursorX = (tft.width() - strW) / 2 + w(offsetXPercent);
+        
+        tft.setCursor(strCursorX, cursorY);
         tft.print(str);
     }
 

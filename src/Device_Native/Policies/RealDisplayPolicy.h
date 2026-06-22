@@ -114,6 +114,15 @@ public:
         print(std::to_string(val));
     }
 
+    int16_t textWidth(const char* str) {
+        if (!font || !str || str[0] == '\0') return 0;
+        int w, h;
+        if (TTF_SizeText(font, str, &w, &h) == 0) {
+            return w;
+        }
+        return 0;
+    }
+
     void setBacklight(bool on) {
         // Mock backlight by changing brightness or just ignore
     }

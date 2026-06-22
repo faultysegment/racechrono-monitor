@@ -44,14 +44,16 @@ public:
     void processEvent(const Event& e) {
         switch (e.type) {
             case EventType::UI_UPDATE:
-                update();
+                if (!state.isConnected || state.isConfigured) {
+                    update();
+                }
                 break;
             case EventType::UI_SHOW_CONNECTED:
                 displayStarted = false; 
                 showMessage("BLE connected!", 0x001F, 0x0000); 
                 break;
             case EventType::UI_SHOW_DISCONNECTED:
-                showMessage("No BLE connection!", 0xFFFF, 0xF800); 
+                showMessage("Disconnected", 0xFFFF, 0xF800); 
                 break;
             case EventType::UI_SHOW_CONFIGURING:
                 tft.setTextColor(0xD69A, 0x0000); 
@@ -65,19 +67,15 @@ public:
                 tft.setTextColor(0xF800, 0x0000); 
                 tft.println("Fail");
                 break;
+            case EventType::HW_PWR_BTN_LONG_PRESS:
             case EventType::UI_SHOW_POWER_OFF:
                 tft.fillScreen(0x0000); 
                 tft.setTextColor(0xFFFF, 0x0000); 
                 tft.setCursor(tft.width() / 2 - 60, tft.height() / 2 - 10);
                 tft.print("Powering off...");
+                tft.flush();
                 break;
-            case EventType::UI_SHOW_EXCEPTION:
-                tft.setTextColor(0xF800, 0x0000); 
-                tft.println("");
-                tft.print(e.arg1);
-                tft.print(" exception");
-                tft.println("");
-                break;
+
             default:
                 break;
         }

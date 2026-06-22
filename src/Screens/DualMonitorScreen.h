@@ -60,7 +60,16 @@ private:
             prefix = 'S';
         }
 
-        if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
+        if (state.monitors[mIdx].hasException) {
+            char valBuf[32];
+            snprintf(valBuf, sizeof(valBuf), "%c   ERR   ", prefix);
+            
+            ui.setCursorY(textY);
+            ui.textCenter(valBuf, 0xF800, 0.15f, -0.05f); // RED
+            
+            ui.setCursorY(barY);
+            ui.emptyBar(0x7BEF, barH);
+        } else if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
             float val = (float)state.monitors[mIdx].value * state.monitors[mIdx].multiplier;
             
             uint32_t color = 0x7BEF; // DARKGREY

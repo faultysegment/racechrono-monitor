@@ -18,6 +18,7 @@ public:
         bool positiveIsGood;
         int decimals;
         float* limitPtr;
+        bool hasException;
     };
 
     Monitor monitors[MAX_MONITORS];
@@ -68,6 +69,7 @@ public:
             monitors[i].positiveIsGood = false;
             monitors[i].decimals = 1;
             monitors[i].limitPtr = nullptr;
+            monitors[i].hasException = false;
         }
     }
 
@@ -82,6 +84,7 @@ public:
             monitors[nextMonitorId].decimals = decimals;
             monitors[nextMonitorId].limitPtr = limitPtr;
             monitors[nextMonitorId].value = INVALID_VALUE;
+            monitors[nextMonitorId].hasException = false;
             nextMonitorId++;
             return true;
         }
@@ -91,6 +94,13 @@ public:
     void setMonitorValue(int id, int32_t value) {
         if (id >= 0 && id < nextMonitorId) {
             monitors[id].value = value;
+            monitors[id].hasException = false;
+        }
+    }
+
+    void setMonitorException(int id, bool exception) {
+        if (id >= 0 && id < nextMonitorId) {
+            monitors[id].hasException = exception;
         }
     }
 };

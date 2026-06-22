@@ -15,6 +15,7 @@ public:
     void print(const char* str) { tft.print(str); }
     void print(int n) { tft.print(n); }
     void println(const char* str) { tft.println(str); }
+    int16_t textWidth(const char* str) { return tft.textWidth(str); }
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { tft.fillRect(x, y, w, h, color); }
     int16_t width() { return tft.width(); }
     int16_t height() { return tft.height(); }

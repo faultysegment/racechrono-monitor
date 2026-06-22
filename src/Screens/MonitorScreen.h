@@ -39,7 +39,13 @@ public:
                 ui.setCursorY(0.70f);
                 ui.emptyBar(0x7BEF, 0.25f);
             } else {
-                if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
+                if (state.monitors[mIdx].hasException) {
+                    ui.setCursorY(0.25f);
+                    ui.textCenter("   ERR   ", 0xF800, 0.20f);
+                    
+                    ui.setCursorY(0.70f);
+                    ui.emptyBar(0x7BEF, 0.25f);
+                } else if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
                     float val = (float)state.monitors[mIdx].value * state.monitors[mIdx].multiplier;
                     
                     uint32_t color = 0x7BEF; // DARKGREY

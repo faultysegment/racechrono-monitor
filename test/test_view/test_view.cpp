@@ -34,11 +34,12 @@ void test_view_show_connected(void) {
 void test_view_show_disconnected(void) {
     view.processEvent(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
     TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastFillScreenColor);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("No BLE connection!") != std::string::npos);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("Disconnected") != std::string::npos);
 }
 
 void test_view_update_bars(void) {
     state.isConnected = true;
+    state.isConfigured = true;
     state.speedLimit = 5.0f;
     state.timeLimit = 10.0f;
     state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);

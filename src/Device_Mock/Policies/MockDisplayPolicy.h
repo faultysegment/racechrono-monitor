@@ -33,7 +33,9 @@ public:
     void fillScreen(uint32_t color) { lastFillScreenColor = color; }
     void setCursor(int16_t x, int16_t y) {}
     void setTextWrap(bool wrap) {}
-    void setTextSize(uint8_t size) {}
+    int currentTextSize = 1;
+    void setTextSize(uint8_t size) { currentTextSize = size; }
+    int16_t textWidth(const char* str) { return strlen(str) * 6 * currentTextSize; }
     void setTextColor(uint32_t c, uint32_t bg) {}
     void print(const char* str) { lastPrint += str; }
     void print(int n) { lastPrint += std::to_string(n); }
