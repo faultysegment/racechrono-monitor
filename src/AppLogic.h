@@ -185,9 +185,9 @@ public:
             case EventType::BLE_DISCONNECTED:
                 state.isConnected = false;
                 bus.push(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 ble.startAdvertising();
                 break;
-
 
             case EventType::BLE_MONITOR_UPDATE:
                 if (!e.str_arg.empty()) {
@@ -211,20 +211,13 @@ public:
                     if (configureMonitors()) {
                         bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
                         state.isConfigured = true;
+                        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                     } else {
                         bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
                     }
                 } else {
                     // Process response
                     handleConfigData(e.str_arg);
-                }
-                break;
-
-            case EventType::SYS_TICK:
-                if (state.isConnected && state.isConfigured) {
-                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
-                } else if (!state.isConnected) {
-                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 }
                 break;
 
@@ -242,7 +235,7 @@ private:
             switch (result) {
                 case CMD_RESULT_EQUATION_EXCEPTION:
                     state.setMonitorException(monitorId, true);
-                    break;
+                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                     break;
             }
         }

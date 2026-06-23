@@ -41,8 +41,8 @@ public:
     }
     
     void tickUI() {
-        appLogic.processEvent(Event{EventType::SYS_TICK, 0, 0, 0});
-        appView.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+        // eink style: we no longer spam UI_UPDATE here.
+        // Screen only updates when explicit events push UI_UPDATE to the bus.
     }
 
     EventBus& getEventBus() {
