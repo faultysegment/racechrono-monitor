@@ -10,6 +10,7 @@
 class RealDisplayPolicy {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
+    SDL_Texture* renderTarget = nullptr;
     TTF_Font* font = nullptr;
 
     int cursorX = 0;
@@ -33,6 +34,8 @@ public:
         TTF_Init();
         window = SDL_CreateWindow("RaceChrono Monitor (AMOLED Simulator)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 466, 466, 0);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        renderTarget = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 466, 466);
+        SDL_SetRenderTarget(renderer, renderTarget);
         // Load default font. Note: requires a ttf file in the working directory!
         font = TTF_OpenFont("font.ttf", 16); 
     }
@@ -44,6 +47,7 @@ public:
     int height() { return 466; }
 
     void fillScreen(uint16_t color) {
+        SDL_SetRenderTarget(renderer, renderTarget);
         setSDLColor(color);
         SDL_RenderClear(renderer);
     }
@@ -166,7 +170,13 @@ public:
     }
 
     void flush() {
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderClear(renderer);
+        if (renderTarget) {
+            SDL_RenderCopyEx(renderer, renderTarget, NULL, NULL, 0, NULL, isHudMode ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+        }
         SDL_RenderPresent(renderer);
+        SDL_SetRenderTarget(renderer, renderTarget);
     }
 
     void drawBattery(int percent, bool force = false) {
