@@ -103,6 +103,16 @@ void test_hud_screen_wrapper(void) {
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
 }
 
+void test_hud_screen_registration(void) {
+    state.reset();
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    policy.setupScreens(mockView);
+
+    TEST_ASSERT_EQUAL(12, mockView.getNumConnectedScreens());
+    TEST_ASSERT_EQUAL(10, mockView.getNumDisconnectedScreens());
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -112,6 +122,7 @@ void setup() {
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
     RUN_TEST(test_hud_screen_wrapper);
+    RUN_TEST(test_hud_screen_registration);
     UNITY_END();
 }
 void loop() {}
@@ -123,6 +134,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
     RUN_TEST(test_hud_screen_wrapper);
+    RUN_TEST(test_hud_screen_registration);
     UNITY_END();
     return 0;
 }
