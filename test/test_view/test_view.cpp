@@ -1,6 +1,7 @@
 #include <unity.h>
 #include "../../src/AppState.h"
 #include "View.h"
+#include "../../src/Screens/HudScreenWrapper.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Native/Policies/NativeViewPolicy.h"
@@ -84,6 +85,23 @@ void test_mock_display_hud_mode(void) {
     display.setHudMode(false);
     TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
 }
+void test_hud_screen_wrapper(void) {
+    MockDisplayPolicy display;
+    MockDisplayPolicy::reset();
+    MonitorScreen<MockDisplayPolicy> innerMonitor{0};
+    HudScreenWrapper<MockDisplayPolicy> hudWrapper(&innerMonitor);
+
+    state.isConnected = true;
+    state.speedLimit = 5.0f;
+    state.addMonitor("M1", 1.0f, "SPEED", true, 1, &state.speedLimit);
+    state.setMonitorValue(0, 10);
+
+    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+    hudWrapper.onShow(display, state);
+    hudWrapper.onUpdate(display, state);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
+}
 
 #ifdef ARDUINO
 void setup() {
@@ -93,6 +111,7 @@ void setup() {
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
+    RUN_TEST(test_hud_screen_wrapper);
     UNITY_END();
 }
 void loop() {}
@@ -103,6 +122,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
+    RUN_TEST(test_hud_screen_wrapper);
     UNITY_END();
     return 0;
 }

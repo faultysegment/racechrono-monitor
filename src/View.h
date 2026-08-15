@@ -87,6 +87,7 @@ public:
 
 private:
     void update() {
+        tft.setHudMode(false);
         int currentIdx = state.isConnected ? state.currentScreenIndex : state.disconnectedScreenIndex;
         IScreen<DisplayPolicy>* activeScreen = state.isConnected ? connectedScreens[currentIdx] : disconnectedScreens[currentIdx];
 
