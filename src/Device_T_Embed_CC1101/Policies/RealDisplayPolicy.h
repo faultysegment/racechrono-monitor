@@ -4,9 +4,16 @@
 
 class RealDisplayPolicy {
     TFT_eSPI tft;
+    bool isHudMode = false;
 public:
     void init() { tft.init(); }
     void setRotation(uint8_t r) { tft.setRotation(r); }
+    void setHudMode(bool hud) {
+        if (isHudMode != hud) {
+            isHudMode = hud;
+            tft.setRotation(hud ? 7 : 3);
+        }
+    }
     void fillScreen(uint32_t color) { tft.fillScreen(color); }
     void setCursor(int16_t x, int16_t y) { tft.setCursor(x, y); }
     void setTextWrap(bool wrap) { tft.setTextWrap(wrap); }

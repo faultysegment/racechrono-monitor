@@ -21,15 +21,18 @@ public:
     static std::string lastPrint;
     static uint32_t lastFillScreenColor;
     static std::vector<MockRect> lastRects;
+    static bool isHud;
 
     static void reset() {
         lastPrint = "";
         lastFillScreenColor = 0;
         lastRects.clear();
+        isHud = false;
     }
 
     void init() {}
     void setRotation(uint8_t r) {}
+    void setHudMode(bool hud) { isHud = hud; }
     void fillScreen(uint32_t color) { lastFillScreenColor = color; }
     void setCursor(int16_t x, int16_t y) {}
     void setTextWrap(bool wrap) {}
@@ -40,6 +43,8 @@ public:
     void print(const char* str) { lastPrint += str; }
     void print(int n) { lastPrint += std::to_string(n); }
     void println(const char* str) { lastPrint += str; lastPrint += "\n"; }
+    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) {}
+    void fillArc(int16_t x, int16_t y, int16_t r1, int16_t r2, float start, float end, uint16_t color) {}
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) {
         lastRects.push_back({x, y, w, h, color});
     }
@@ -56,4 +61,5 @@ public:
 std::string MockDisplayPolicy::lastPrint = "";
 uint32_t MockDisplayPolicy::lastFillScreenColor = 0;
 std::vector<MockRect> MockDisplayPolicy::lastRects;
+bool MockDisplayPolicy::isHud = false;
 #endif

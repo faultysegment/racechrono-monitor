@@ -90,7 +90,7 @@ void test_applogic_navigation_scroll(void) {
     MockHWPolicy::navigationDelta = -1;
     logic.pollInput();
     flushEvents();
-    TEST_ASSERT_EQUAL(2, state.currentScreenIndex);
+    TEST_ASSERT_EQUAL(state.numConnectedScreens - 1, state.currentScreenIndex);
 }
 
 void test_applogic_edit_mode(void) {

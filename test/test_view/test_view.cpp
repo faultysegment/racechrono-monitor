@@ -47,8 +47,8 @@ void test_view_update_bars(void) {
     state.setMonitorValue(0, 5); // 5 / 10 = 50%
     state.setMonitorValue(1, 2); // 2 / 5 = 40%
     
-    // Test screen 0 (Time)
-    state.currentScreenIndex = 0;
+    // Test rectangular monitor0 (Time)
+    state.currentScreenIndex = 3;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
@@ -61,8 +61,8 @@ void test_view_update_bars(void) {
         TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[1].w);
     }
 
-    // Test screen 1 (Speed)
-    state.currentScreenIndex = 1;
+    // Test rectangular monitor1 (Speed)
+    state.currentScreenIndex = 4;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
@@ -76,6 +76,15 @@ void test_view_update_bars(void) {
     }
 }
 
+void test_mock_display_hud_mode(void) {
+    MockDisplayPolicy display;
+    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+    display.setHudMode(true);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::isHud);
+    display.setHudMode(false);
+    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -83,6 +92,7 @@ void setup() {
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
+    RUN_TEST(test_mock_display_hud_mode);
     UNITY_END();
 }
 void loop() {}
@@ -92,6 +102,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
+    RUN_TEST(test_mock_display_hud_mode);
     UNITY_END();
     return 0;
 }

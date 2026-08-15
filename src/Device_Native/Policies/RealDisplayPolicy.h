@@ -2,6 +2,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <string>
+#include <cmath>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 class RealDisplayPolicy {
     SDL_Window* window = nullptr;
@@ -14,6 +18,8 @@ class RealDisplayPolicy {
     uint16_t bgColor = 0x0000;
     int textSize = 1;
 
+    bool isHudMode = false;
+
     void setSDLColor(uint16_t color) {
         uint8_t r = (color >> 11) * 8;
         uint8_t g = ((color >> 5) & 0x3F) * 4;
@@ -25,16 +31,17 @@ public:
     void init() {
         SDL_Init(SDL_INIT_VIDEO);
         TTF_Init();
-        window = SDL_CreateWindow("RaceChrono Monitor (Native)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, 0);
+        window = SDL_CreateWindow("RaceChrono Monitor (AMOLED Simulator)", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 466, 466, 0);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         // Load default font. Note: requires a ttf file in the working directory!
         font = TTF_OpenFont("font.ttf", 16); 
     }
 
     void setRotation(int r) { } // Ignore for mock
+    void setHudMode(bool hud) { isHudMode = hud; }
 
-    int width() { return 1280; }
-    int height() { return 720; }
+    int width() { return 466; }
+    int height() { return 466; }
 
     void fillScreen(uint16_t color) {
         setSDLColor(color);
@@ -45,6 +52,37 @@ public:
         setSDLColor(color);
         SDL_Rect rect = {x, y, w, h};
         SDL_RenderFillRect(renderer, &rect);
+    }
+
+    void fillCircle(int cx, int cy, int r, uint16_t color) {
+        setSDLColor(color);
+        for (int w = 0; w < r * 2; w++) {
+            for (int h = 0; h < r * 2; h++) {
+                int dx = r - w; // horizontal offset
+                int dy = r - h; // vertical offset
+                if ((dx*dx + dy*dy) <= (r * r)) {
+                    SDL_RenderDrawPoint(renderer, cx + dx, cy + dy);
+                }
+            }
+        }
+    }
+
+    void fillArc(int x, int y, int r1, int r2, float startAngle, float endAngle, uint16_t color) {
+        setSDLColor(color);
+        // angles are in degrees. 0 = top, 90 = right.
+        float startRad = (startAngle - 90.0f) * M_PI / 180.0f;
+        float endRad = (endAngle - 90.0f) * M_PI / 180.0f;
+        
+        float step = 1.0f / (float)r1; // approx 1 pixel arc length
+        for (float a = startRad; a <= endRad; a += step) {
+            float ca = cos(a);
+            float sa = sin(a);
+            int x1 = x + ca * r2;
+            int y1 = y + sa * r2;
+            int x2 = x + ca * r1;
+            int y2 = y + sa * r1;
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        }
     }
 
     void setCursor(int x, int y) {
