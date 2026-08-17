@@ -40,7 +40,7 @@ public:
     void setHudMode(bool hud) {
         if (isHudMode != hud) {
             isHudMode = hud;
-            gfx->setRotation(hud ? 5 : 1);
+            gfx->setRotation(hud ? 1 : 0);
         }
     }
     void fillScreen(uint32_t color) { gfx->fillScreen(color); }
