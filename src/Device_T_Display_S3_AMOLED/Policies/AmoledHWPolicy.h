@@ -83,7 +83,11 @@ struct AmoledHWPolicy {
     }
     
     static void pollExtraEvents(EventBus& bus) {
-        if (isTouchPressed || swiping || digitalRead(TP_INT) == LOW) {
+        if (swiping && (::millis() - lastTouchMillis > 1500)) {
+            swiping = false; // Safety timeout reset if release interrupt was lost
+        }
+
+        if (isTouchPressed) {
             isTouchPressed = false;
             uint8_t touched = touch.getPoint(touchX, touchY, touch.getSupportTouchPoint());
             if (touched > 0) {
