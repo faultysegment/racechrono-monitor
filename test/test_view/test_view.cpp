@@ -34,7 +34,7 @@ void test_view_show_connected(void) {
 
 void test_view_show_disconnected(void) {
     view.processEvent(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
-    TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastFillScreenColor);
+    TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastFillScreenColor);
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("Disconnected") != std::string::npos);
 }
 

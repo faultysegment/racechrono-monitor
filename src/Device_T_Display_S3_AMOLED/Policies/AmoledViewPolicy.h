@@ -3,7 +3,7 @@
 #include "../../View.h"
 #include "../../Screens/CircularMonitorScreen.h"
 #include "../../Screens/CircularDualMonitorScreen.h"
-#include "../../Screens/DisconnectedMsgScreen.h"
+#include "../../Screens/CircularDisconnectedScreen.h"
 #include "../../Screens/CircularConfigMonitorScreen.h"
 #include "../../Screens/HudScreenWrapper.h"
 
@@ -17,7 +17,7 @@ class AmoledViewPolicy {
     HudScreenWrapper<DisplayPolicy> hudMonitor1{&monitor1};
     HudScreenWrapper<DisplayPolicy> hudDualMonitor{&dualMonitor};
 
-    DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
+    CircularDisconnectedScreen<DisplayPolicy> disconnectedMsg;
     CircularConfigMonitorScreen<DisplayPolicy> configSpeed;
     CircularConfigMonitorScreen<DisplayPolicy> configTime;
 

@@ -53,7 +53,8 @@ public:
                 showMessage("BLE connected!", 0x001F, 0x0000); 
                 break;
             case EventType::UI_SHOW_DISCONNECTED:
-                showMessage("Disconnected", 0xFFFF, 0xF800); 
+                displayStarted = false;
+                showMessage("Disconnected", 0xF800, 0x0000); 
                 break;
             case EventType::UI_SHOW_CONFIGURING:
                 tft.setTextColor(0xD69A, 0x0000); 
