@@ -32,7 +32,7 @@ void uiTask(void* pvParameters) {
 void inputTask(void* pvParameters) {
     while (1) {
         app.pollInput();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(5)); // High frequency 200Hz input polling
     }
 }
 
@@ -46,10 +46,11 @@ void logicTask(void* pvParameters) {
 void setup() {
     app.setup();
 
-    // Pin UI to Core 1 (App Core) to dedicate it for SPI/display rendering
-    xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 1, NULL, 1);
-    // Pin Input and Logic to Core 0 (Pro Core) where BLE/WiFi usually runs
-    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 2, NULL, 0);
+    // Pin UI and Input to Core 1 (App Core) with Input at high priority so touch is never delayed by rendering
+    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 2, NULL, 1);
+    
+    // Pin Logic to Core 0 (Pro Core) where BLE stack runs
     xTaskCreatePinnedToCore(logicTask, "Logic_Task", 4096, NULL, 1, NULL, 0);
 }
 
