@@ -21,32 +21,29 @@ namespace {
         if (!swiping) return;
         swiping = false;
         
-        uint32_t dur = ::millis() - lastTouchMillis;
         int dx = currentX - startX;
         int dy = currentY - startY;
 
-        if (dur < 1000) { // Valid gesture within 1s
-            if (abs(dx) > 40 || abs(dy) > 40) {
-                // Swipe gesture
-                if (abs(dx) > abs(dy)) {
-                    int delta = (dx > 0) ? -1 : 1; // Left swipe = next screen, Right swipe = prev screen
-                    bus.push(Event{EventType::HW_NAV_DELTA, delta, 0, 0});
-                } else {
-                    // Vertical Swipe -> mode toggle
-                    bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
-                }
+        if (abs(dx) > 30 || abs(dy) > 30) {
+            // Swipe gesture
+            if (abs(dx) > abs(dy)) {
+                int delta = (dx > 0) ? -1 : 1; 
+                bus.push(Event{EventType::HW_NAV_DELTA, delta, 0, 0});
             } else {
-                // Tap gesture
-                if (startY > 350) { 
-                    // Tap bottom area -> Action Toggle
-                    bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
-                } else if (startX < 200) {
-                    // Tap left area -> Previous screen
-                    bus.push(Event{EventType::HW_NAV_DELTA, -1, 0, 0});
-                } else if (startX >= 200) {
-                    // Tap right area -> Next screen
-                    bus.push(Event{EventType::HW_NAV_DELTA, 1, 0, 0});
-                }
+                // Vertical Swipe -> mode toggle
+                bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            }
+        } else {
+            // Tap gesture
+            if (startY > 350) { 
+                // Tap bottom area -> Action Toggle
+                bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            } else if (startX < 233) {
+                // Tap left area (-) -> Decrease value / Prev screen
+                bus.push(Event{EventType::HW_NAV_DELTA, -1, 0, 0});
+            } else {
+                // Tap right area (+) -> Increase value / Next screen
+                bus.push(Event{EventType::HW_NAV_DELTA, 1, 0, 0});
             }
         }
     }
@@ -84,14 +81,17 @@ struct AmoledHWPolicy {
         if (digitalRead(TP_INT) == LOW || swiping) {
             uint8_t touched = touch.getPoint(touchX, touchY, 1);
             if (touched > 0) {
+                int16_t rx = 466 - touchX[0]; // Invert X axis to match display rotation
+                int16_t ry = touchY[0];
+
                 if (!swiping) {
-                    startX = touchX[0];
-                    startY = touchY[0];
+                    startX = rx;
+                    startY = ry;
                     swiping = true;
                     lastTouchMillis = now;
                 }
-                currentX = touchX[0];
-                currentY = touchY[0];
+                currentX = rx;
+                currentY = ry;
             } else if (swiping) {
                 finishGesture(bus);
             }
