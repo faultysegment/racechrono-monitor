@@ -7,6 +7,7 @@
 #define XPOWERS_CHIP_BQ25896
 #include <XPowersLib.h>
 #include <RotaryEncoder.h>
+#include "../../EventBus.h"
 
 namespace {
     RotaryEncoder* encoder = nullptr;
@@ -52,6 +53,8 @@ struct RealHWPolicy {
         int dir = (int)encoder->getDirection();
         return dir;
     }
+
+    static void pollExtraEvents(EventBus& bus) {}
 
     static bool isPowerKeyPressed() {
         return ::digitalRead(6) == LOW; // BOARD_USER_KEY

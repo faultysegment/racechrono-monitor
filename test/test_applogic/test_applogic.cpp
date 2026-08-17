@@ -140,6 +140,43 @@ void test_applogic_edit_mode(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.1f, MockStoragePolicy::store["limit_time"]);
 }
 
+void test_applogic_screen_persistence() {
+    setUp();
+    MockStoragePolicy::reset();
+
+    // Start with 4 connected screens
+    state.numConnectedScreens = 4;
+    
+    // Simulate BLE Connected
+    testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+    flushEvents();
+    TEST_ASSERT_TRUE(state.isConnected);
+    state.numConnectedScreens = 4;
+
+    // Scroll to screen 2
+    MockHWPolicy::navigationDelta = 1;
+    logic.pollInput();
+    flushEvents();
+    TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
+
+    MockHWPolicy::navigationDelta = 1;
+    logic.pollInput();
+    flushEvents();
+    TEST_ASSERT_EQUAL(2, state.currentScreenIndex);
+    TEST_ASSERT_EQUAL(2, MockStoragePolicy::storeInt["last_screen"]);
+
+    // Disconnect
+    testBus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
+    flushEvents();
+    TEST_ASSERT_FALSE(state.isConnected);
+
+    // Reconnect - should restore screen index 2
+    testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+    flushEvents();
+    TEST_ASSERT_TRUE(state.isConnected);
+    TEST_ASSERT_EQUAL(2, state.currentScreenIndex);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -148,6 +185,7 @@ void setup() {
     RUN_TEST(test_applogic_button_power_off);
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_edit_mode);
+    RUN_TEST(test_applogic_screen_persistence);
     UNITY_END();
 }
 void loop() {}
@@ -158,6 +196,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_applogic_button_power_off);
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_edit_mode);
+    RUN_TEST(test_applogic_screen_persistence);
     UNITY_END();
     return 0;
 }

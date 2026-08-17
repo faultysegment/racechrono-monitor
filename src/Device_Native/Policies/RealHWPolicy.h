@@ -2,6 +2,7 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "../../EventBus.h"
 
 class RealHWPolicy {
 public:
@@ -58,6 +59,35 @@ public:
         }
         
         return delta;
+    }
+
+    static void pollExtraEvents(EventBus& bus) {
+        SDL_PumpEvents();
+        const Uint8* state = SDL_GetKeyboardState(NULL);
+        static bool upPressed = false;
+        static bool downPressed = false;
+        static bool enterPressed = false;
+        
+        if (state[SDL_SCANCODE_UP] && !upPressed) {
+            bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            upPressed = true;
+        } else if (!state[SDL_SCANCODE_UP]) {
+            upPressed = false;
+        }
+
+        if (state[SDL_SCANCODE_DOWN] && !downPressed) {
+            bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            downPressed = true;
+        } else if (!state[SDL_SCANCODE_DOWN]) {
+            downPressed = false;
+        }
+
+        if (state[SDL_SCANCODE_RETURN] && !enterPressed) {
+            bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            enterPressed = true;
+        } else if (!state[SDL_SCANCODE_RETURN]) {
+            enterPressed = false;
+        }
     }
 
     static void getMacDefault(uint8_t* mac) {

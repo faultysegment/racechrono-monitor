@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "../../EventBus.h"
 
 struct MockHWPolicy {
     static uint32_t currentMillis;
@@ -26,6 +27,8 @@ struct MockHWPolicy {
         navigationDelta = 0;
         return d;
     }
+
+    static void pollExtraEvents(EventBus& bus) {}
 
     static bool isPowerKeyPressed() {
         return powerKeyPressed;

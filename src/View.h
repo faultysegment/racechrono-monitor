@@ -3,7 +3,7 @@
 #include "AppState.h"
 #include <cmath>
 #include <vector>
-#include "IScreen.h"
+#include "Screens/IScreen.h"
 #include "EventBus.h"
 
 template <typename DisplayPolicy, typename HWPolicy>
@@ -88,8 +88,20 @@ public:
 private:
     void update() {
         tft.setHudMode(false);
-        int currentIdx = state.isConnected ? state.currentScreenIndex : state.disconnectedScreenIndex;
-        IScreen<DisplayPolicy>* activeScreen = state.isConnected ? connectedScreens[currentIdx] : disconnectedScreens[currentIdx];
+        int currentIdx = 0;
+        IScreen<DisplayPolicy>* activeScreen = nullptr;
+        if (state.isConnected) {
+            if (!connectedScreens.empty()) {
+                currentIdx = state.currentScreenIndex % connectedScreens.size();
+                activeScreen = connectedScreens[currentIdx];
+            }
+        } else {
+            if (!disconnectedScreens.empty()) {
+                currentIdx = state.disconnectedScreenIndex % disconnectedScreens.size();
+                activeScreen = disconnectedScreens[currentIdx];
+            }
+        }
+        if (!activeScreen) return;
 
         if (!displayStarted || lastScreenIndex != currentIdx || lastEditMode != state.isEditMode || lastConnected != state.isConnected) {
             displayStarted = true;
@@ -122,4 +134,3 @@ private:
     std::vector<IScreen<DisplayPolicy>*> connectedScreens;
     std::vector<IScreen<DisplayPolicy>*> disconnectedScreens;
 };
-

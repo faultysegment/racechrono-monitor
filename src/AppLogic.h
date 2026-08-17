@@ -39,6 +39,7 @@ public:
         StoragePolicy::init();
         state.speedLimit = StoragePolicy::getFloat("limit_speed", 5.0f);
         state.timeLimit = StoragePolicy::getFloat("limit_time", 0.1f);
+        state.currentScreenIndex = StoragePolicy::getInt("last_screen", 0);
 
         HWPolicy::initBattery();
         state.batteryPercent = HWPolicy::getBatteryPercent();
@@ -71,10 +72,11 @@ public:
         
         if (!lastActionBtn && actionBtn) { // Pressed
             actionBtnPressTime = HWPolicy::millis();
-            bus.push(Event{EventType::HW_ACTION_BTN_PRESS, 0, 0, 0});
         } else if (lastActionBtn && !actionBtn) { // Released
             uint32_t duration = HWPolicy::millis() - actionBtnPressTime;
-            bus.push(Event{EventType::HW_ACTION_BTN_RELEASE, (int32_t)duration, 0, 0});
+            if (duration > 50 && duration < 1000) {
+                bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
+            }
         }
         lastActionBtn = actionBtn;
 
@@ -82,6 +84,8 @@ public:
         if (navDelta != 0) {
             bus.push(Event{EventType::HW_NAV_DELTA, navDelta, 0, 0});
         }
+        
+        HWPolicy::pollExtraEvents(bus);
     }
 
     void pollLogic() {
@@ -117,68 +121,23 @@ public:
                 HWPolicy::powerOffBoard();
                 break;
 
-            case EventType::HW_ACTION_BTN_RELEASE: {
-                uint32_t duration = e.arg1;
-                if (duration > 50 && duration < 1000) { 
-                    state.isEditMode = !state.isEditMode;
-                    if (!state.isEditMode) {
-                        StoragePolicy::putFloat("limit_speed", state.speedLimit);
-                        StoragePolicy::putFloat("limit_time", state.timeLimit);
-                    }
-                    bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
-                }
+            case EventType::HW_ACTION_TOGGLE:
+                toggleEditMode();
                 break;
-            }
 
             case EventType::HW_NAV_DELTA: {
-                int navDelta = e.arg1;
                 if (state.isEditMode) {
-                    float change = (navDelta > 0) ? 0.1f : -0.1f;
-                    if (state.isConnected) {
-                        if (state.currentScreenIndex < state.nextMonitorId) {
-                            float* limitPtr = state.monitors[state.currentScreenIndex].limitPtr;
-                            if (limitPtr) {
-                                *limitPtr += change;
-                                if (*limitPtr < 0.1f) *limitPtr = 0.1f;
-                            }
-                        }
-                    } else {
-                        if (state.disconnectedScreenIndex == 1) { // Speed Config
-                            state.speedLimit += change;
-                            if (state.speedLimit < 0.1f) state.speedLimit = 0.1f;
-                        } else if (state.disconnectedScreenIndex == 2) { // Time Config
-                            state.timeLimit += change;
-                            if (state.timeLimit < 0.1f) state.timeLimit = 0.1f;
-                        }
-                    }
+                    changeValue(e.arg1);
                 } else {
-                    if (state.isConnected) {
-                        int numConnected = state.numConnectedScreens;
-                        if (numConnected > 0) {
-                            if (navDelta > 0) {
-                                state.currentScreenIndex = (state.currentScreenIndex + 1) % numConnected;
-                            } else {
-                                state.currentScreenIndex = (state.currentScreenIndex - 1 + numConnected) % numConnected;
-                            }
-                        }
-                    } else {
-                        int numDisconnected = state.numDisconnectedScreens;
-                        if (numDisconnected > 0) {
-                            if (navDelta > 0) {
-                                state.disconnectedScreenIndex = (state.disconnectedScreenIndex + 1) % numDisconnected;
-                            } else {
-                                state.disconnectedScreenIndex = (state.disconnectedScreenIndex - 1 + numDisconnected) % numDisconnected;
-                            }
-                        }
-                    }
+                    changePage(e.arg1);
                 }
-                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
             }
 
             case EventType::BLE_CONNECTED:
                 state.isConnected = true;
                 state.reset();
+                state.currentScreenIndex = StoragePolicy::getInt("last_screen", 0);
                 bus.push(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
                 break;
 
@@ -227,6 +186,61 @@ public:
     }
 
 private:
+    void toggleEditMode() {
+        state.isEditMode = !state.isEditMode;
+        if (!state.isEditMode) {
+            StoragePolicy::putFloat("limit_speed", state.speedLimit);
+            StoragePolicy::putFloat("limit_time", state.timeLimit);
+        }
+        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+    }
+
+    void changePage(int navDelta) {
+        if (state.isConnected) {
+            int numConnected = state.numConnectedScreens;
+            if (numConnected > 0) {
+                if (navDelta > 0) {
+                    state.currentScreenIndex = (state.currentScreenIndex + 1) % numConnected;
+                } else {
+                    state.currentScreenIndex = (state.currentScreenIndex - 1 + numConnected) % numConnected;
+                }
+                StoragePolicy::putInt("last_screen", state.currentScreenIndex);
+            }
+        } else {
+            int numDisconnected = state.numDisconnectedScreens;
+            if (numDisconnected > 0) {
+                if (navDelta > 0) {
+                    state.disconnectedScreenIndex = (state.disconnectedScreenIndex + 1) % numDisconnected;
+                } else {
+                    state.disconnectedScreenIndex = (state.disconnectedScreenIndex - 1 + numDisconnected) % numDisconnected;
+                }
+            }
+        }
+        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+    }
+
+    void changeValue(int navDelta) {
+        float change = (navDelta > 0) ? 0.1f : -0.1f;
+        if (state.isConnected) {
+            if (state.currentScreenIndex < state.nextMonitorId) {
+                float* limitPtr = state.monitors[state.currentScreenIndex].limitPtr;
+                if (limitPtr) {
+                    *limitPtr += change;
+                    if (*limitPtr < 0.1f) *limitPtr = 0.1f;
+                }
+            }
+        } else {
+            if (state.disconnectedScreenIndex == 1) { // Speed Config
+                state.speedLimit += change;
+                if (state.speedLimit < 0.1f) state.speedLimit = 0.1f;
+            } else if (state.disconnectedScreenIndex == 2) { // Time Config
+                state.timeLimit += change;
+                if (state.timeLimit < 0.1f) state.timeLimit = 0.1f;
+            }
+        }
+        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+    }
+
     void handleConfigData(const std::string& rxData) {
         const uint8_t* data = (const uint8_t*)rxData.data();
         if (rxData.length() >= 1) {
