@@ -7,125 +7,111 @@
 #include "../../EventBus.h"
 #include <TouchDrvCST92xx.h>
 
-namespace {
-    TouchDrvCST92xx touch;
-    int16_t touchX[5], touchY[5];
-    uint32_t lastTouchMillis = 0;
-    
-    // Swipe & Tap detection vars
-    int16_t startX = 0, startY = 0;
-    int16_t currentX = 0, currentY = 0;
-    bool swiping = false;
+struct AmoledHWPolicy {
+private:
+    static constexpr int16_t TOUCH_WIDTH           = 466;
+    static constexpr int16_t TOUCH_HEIGHT          = 466;
+    static constexpr int16_t TAP_ZONE_BOTTOM_Y     = 350;
+    static constexpr int16_t TAP_ZONE_SPLIT_X      = TOUCH_WIDTH / 2;
+    static constexpr int16_t SWIPE_MIN_DISTANCE    = 30;
+    static constexpr uint32_t TOUCH_POLL_PERIOD_MS = 15;
 
-    void finishGesture(EventBus& bus) {
-        if (!swiping) return;
-        swiping = false;
-        
-        int dx = currentX - startX;
-        int dy = currentY - startY;
+    static TouchDrvCST92xx& getTouch() { static TouchDrvCST92xx t; return t; }
+    static int16_t* getTouchX() { static int16_t x[5] = {0}; return x; }
+    static int16_t* getTouchY() { static int16_t y[5] = {0}; return y; }
+    static int16_t& getStartX() { static int16_t sx = 0; return sx; }
+    static int16_t& getStartY() { static int16_t sy = 0; return sy; }
+    static int16_t& getCurrentX() { static int16_t cx = 0; return cx; }
+    static int16_t& getCurrentY() { static int16_t cy = 0; return cy; }
+    static bool& getIsSwiping() { static bool s = false; return s; }
 
-        if (abs(dx) > 30 || abs(dy) > 30) {
-            // Swipe gesture
+    static void finishGesture(EventBus& bus) {
+        bool& isSwiping = getIsSwiping();
+        if (!isSwiping) return;
+        isSwiping = false;
+
+        int dx = getCurrentX() - getStartX();
+        int dy = getCurrentY() - getStartY();
+
+        if (abs(dx) > SWIPE_MIN_DISTANCE || abs(dy) > SWIPE_MIN_DISTANCE) {
             if (abs(dx) > abs(dy)) {
-                int delta = (dx > 0) ? -1 : 1; 
+                int delta = (dx > 0) ? -1 : 1;
                 bus.push(Event{EventType::HW_NAV_DELTA, delta, 0, 0});
             } else {
-                // Vertical Swipe -> mode toggle
                 bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
             }
         } else {
-            // Tap gesture
-            if (startY > 350) { 
-                // Tap bottom area -> Action Toggle
+            if (getStartY() > TAP_ZONE_BOTTOM_Y) {
                 bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
-            } else if (startX < 233) {
-                // Tap left area (-) -> Decrease value / Prev screen
+            } else if (getStartX() < TAP_ZONE_SPLIT_X) {
                 bus.push(Event{EventType::HW_NAV_DELTA, -1, 0, 0});
             } else {
-                // Tap right area (+) -> Increase value / Next screen
                 bus.push(Event{EventType::HW_NAV_DELTA, 1, 0, 0});
             }
         }
     }
-}
 
-struct AmoledHWPolicy {
+public:
     static void initBoard() {
-        // Enable power for Display and Touch (IO38)
         pinMode(38, OUTPUT);
         digitalWrite(38, HIGH);
-        delay(50); // wait for power to stabilize
+        delay(50);
 
-        // Init I2C
         Wire.begin(IIC_SDA, IIC_SCL);
-        Wire.setClock(400000); // 400kHz Fast I2C
-        Wire.setTimeOut(50);   // 50ms timeout
+        Wire.setClock(400000);
+        Wire.setTimeOut(50);
 
-        // Init Touch
+        TouchDrvCST92xx& touch = getTouch();
         touch.jumpCheck();
         touch.setPins(-1, TP_INT);
         pinMode(TP_INT, INPUT_PULLUP);
         touch.begin(Wire, 0x5A, IIC_SDA, IIC_SCL);
 
-        // Init battery ADC pin
         pinMode(BATTERY_VOLTAGE_ADC_DATA, INPUT);
     }
-    
+
     static void pollExtraEvents(EventBus& bus) {
         uint32_t now = ::millis();
         static uint32_t lastPoll = 0;
-        if (now - lastPoll < 15) return; // 60Hz max rate matching CST9217 HW
+        if (now - lastPoll < TOUCH_POLL_PERIOD_MS) return;
         lastPoll = now;
 
-        // Only query I2C when touch INT pin is LOW or when tracking an active gesture
-        if (digitalRead(TP_INT) == LOW || swiping) {
+        bool& isSwiping = getIsSwiping();
+        if (digitalRead(TP_INT) == LOW || isSwiping) {
+            TouchDrvCST92xx& touch = getTouch();
+            int16_t* touchX = getTouchX();
+            int16_t* touchY = getTouchY();
             uint8_t touched = touch.getPoint(touchX, touchY, 1);
             if (touched > 0) {
-                int16_t rx = 466 - touchX[0]; // Invert X axis to match display rotation
+                int16_t rx = TOUCH_WIDTH - touchX[0];
                 int16_t ry = touchY[0];
 
-                if (!swiping) {
-                    startX = rx;
-                    startY = ry;
-                    swiping = true;
-                    lastTouchMillis = now;
+                if (!isSwiping) {
+                    getStartX() = rx;
+                    getStartY() = ry;
+                    isSwiping = true;
                 }
-                currentX = rx;
-                currentY = ry;
-            } else if (swiping) {
+                getCurrentX() = rx;
+                getCurrentY() = ry;
+            } else if (isSwiping) {
                 finishGesture(bus);
             }
         }
     }
 
-    static int getNavigationDelta() {
-        return 0; // Handled via pollExtraEvents
-    }
-
-    static bool isPowerKeyPressed() {
-        // BOOT button is GPIO 0
-        return digitalRead(0) == LOW;
-    }
-
-    static bool isActionKeyPressed() {
-        return false; // Handled via pollExtraEvents
-    }
+    static int getNavigationDelta() { return 0; }
+    static bool isPowerKeyPressed() { return digitalRead(0) == LOW; }
+    static bool isActionKeyPressed() { return false; }
 
     static void powerOffBoard() {
-        // Wait until button released
-        while (digitalRead(0) == LOW) {
-            delay(50);
-        }
+        while (digitalRead(0) == LOW) delay(50);
         esp_sleep_enable_ext0_wakeup((gpio_num_t)0, LOW);
         esp_deep_sleep_start();
     }
 
-    static void initBattery() {
-        // Already init in initBoard if needed
-    }
-    
+    static void initBattery() {}
+
     static int getBatteryPercent() {
-        // Read ADC
         int adc = analogRead(BATTERY_VOLTAGE_ADC_DATA);
         float voltage = (adc / 4095.0) * 3.3 * 2;
         int pct = (int)((voltage - 3.2) / (4.2 - 3.2) * 100);
@@ -134,15 +120,7 @@ struct AmoledHWPolicy {
         return pct;
     }
 
-    static void delay(uint32_t ms) {
-        ::delay(ms);
-    }
-    
-    static uint32_t millis() {
-        return ::millis();
-    }
-    
-    static void getMacDefault(uint8_t* mac) {
-        esp_efuse_mac_get_default(mac);
-    }
+    static void delay(uint32_t ms) { ::delay(ms); }
+    static uint32_t millis() { return ::millis(); }
+    static void getMacDefault(uint8_t* mac) { esp_efuse_mac_get_default(mac); }
 };
