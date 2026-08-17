@@ -46,11 +46,13 @@ void logicTask(void* pvParameters) {
 void setup() {
     app.setup();
 
-    // Pin UI and Input to Core 1 (App Core) with Input at high priority so touch is never delayed by rendering
-    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 5, NULL, 1);
-    xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 2, NULL, 1);
+    // Pin Input to Core 0 (PRO_CPU) for dedicated high-priority I2C touch polling
+    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 5, NULL, 0);
+
+    // Pin UI Rendering to Core 1 (APP_CPU) for dedicated display rendering
+    xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 1, NULL, 1);
     
-    // Pin Logic to Core 0 (Pro Core) where BLE stack runs
+    // Pin Logic to Core 0 (PRO_CPU)
     xTaskCreatePinnedToCore(logicTask, "Logic_Task", 4096, NULL, 1, NULL, 0);
 }
 
