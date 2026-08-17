@@ -15,7 +15,7 @@ public:
         CircularUI<DisplayPolicy> ui(tft);
         
         if (state.nextMonitorId < 2) {
-            ui.textCenter("WAIT", 0xFFFF, 0.15f, 0.5f);
+            ui.textCenter("WAIT", 0xFFFF, 0.12f, 0.5f);
             return;
         }
 
@@ -37,11 +37,11 @@ public:
         snprintf(buf0, sizeof(buf0), "%.1f", val0);
         snprintf(buf1, sizeof(buf1), "%.1f", val1);
         
-        ui.textCenter(state.monitors[0].title, 0x7BEF, 0.08f, 0.2f);
-        ui.textCenter(buf0, 0xFFFF, 0.2f, 0.35f);
+        ui.textCenter(state.monitors[0].title, 0x7BEF, 0.06f, 0.20f);
+        ui.textCenter(buf0, 0xFFFF, 0.12f, 0.33f);
         
-        ui.textCenter(buf1, 0xFFFF, 0.2f, 0.65f);
-        ui.textCenter(state.monitors[1].title, 0x7BEF, 0.08f, 0.8f);
+        ui.textCenter(buf1, 0xFFFF, 0.12f, 0.67f);
+        ui.textCenter(state.monitors[1].title, 0x7BEF, 0.06f, 0.80f);
         
         // Draw top arc for monitor 0 (0 to 180 degrees roughly)
         float angle0 = (std::abs(val0) / currentLimit0) * 180.0f;

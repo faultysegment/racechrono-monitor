@@ -17,14 +17,14 @@ public:
         int radiusIn = radiusOut - ui.h(0.025f);
         tft.fillArc(cx, cy, radiusOut, radiusIn, 0.0f, 360.0f, 0xF800);
         
-        // Main status text
-        ui.textCenter("DISCONNECTED", 0xF800, 0.085f, 0.38f);
+        // Main status text (Big bold red)
+        ui.textCenter("DISCONNECTED", 0xF800, 0.078f, 0.38f);
         
-        // Subtitle
-        ui.textCenter("Waiting for BLE...", 0xFFFF, 0.055f, 0.49f);
+        // Subtitle (Crisp white)
+        ui.textCenter("Waiting for BLE...", 0xFFFF, 0.05f, 0.50f);
         
-        // Bottom hint
-        ui.textCenter("Swipe to configure", 0x7BEF, 0.045f, 0.65f);
+        // Bottom hint (Dimmed gray)
+        ui.textCenter("Swipe to configure", 0x7BEF, 0.038f, 0.65f);
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {}
