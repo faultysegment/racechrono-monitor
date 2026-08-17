@@ -72,7 +72,8 @@ public:
         if (sweep <= 0.001f) return;
         if (sweep > 360.0f) sweep = 360.0f;
 
-        float step = 2.0f; 
+        // 10-degree steps for instant, burst QSPI rendering without visible drawing steps
+        float step = 10.0f; 
         int numSteps = (int)(sweep / step);
         if (numSteps < 1) numSteps = 1;
         float actualStep = sweep / numSteps;
@@ -88,6 +89,7 @@ public:
         int16_t x0_in  = cx + (int16_t)roundf(r2 * sin0);
         int16_t y0_in  = cy - (int16_t)roundf(r2 * cos0);
 
+        gfx->startWrite();
         for (int i = 1; i <= numSteps; i++) {
             float a = startAngle + i * actualStep;
             float rad1 = a * DEG2RAD;
@@ -107,6 +109,7 @@ public:
             x0_in  = x1_in;
             y0_in  = y1_in;
         }
+        gfx->endWrite();
     }
     void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { gfx->fillCircle(x, y, r, color); }
     void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { gfx->drawFastHLine(x, y, w, color); }
