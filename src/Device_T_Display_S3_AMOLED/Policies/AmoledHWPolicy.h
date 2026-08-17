@@ -61,10 +61,13 @@ struct AmoledHWPolicy {
 
         // Init I2C
         Wire.begin(IIC_SDA, IIC_SCL);
+        Wire.setClock(400000); // 400kHz Fast I2C
+        Wire.setTimeOut(50);   // 50ms timeout
 
         // Init Touch
         touch.jumpCheck();
         touch.setPins(-1, TP_INT);
+        pinMode(TP_INT, INPUT_PULLUP);
         touch.begin(Wire, 0x5A, IIC_SDA, IIC_SCL);
 
         // Init battery ADC pin
@@ -74,21 +77,22 @@ struct AmoledHWPolicy {
     static void pollExtraEvents(EventBus& bus) {
         uint32_t now = ::millis();
         static uint32_t lastPoll = 0;
-        if (now - lastPoll < 20) return; // Poll touch at 50Hz
+        if (now - lastPoll < 20) return; // Poll at 50Hz max
         lastPoll = now;
 
-        uint8_t touched = touch.getPoint(touchX, touchY, 1);
-        if (touched > 0) {
-            if (!swiping) {
-                startX = touchX[0];
-                startY = touchY[0];
-                swiping = true;
-                lastTouchMillis = now;
-            }
-            currentX = touchX[0];
-            currentY = touchY[0];
-        } else {
-            if (swiping) {
+        // Only query I2C when touch INT pin is LOW or when tracking an active gesture
+        if (digitalRead(TP_INT) == LOW || swiping) {
+            uint8_t touched = touch.getPoint(touchX, touchY, 1);
+            if (touched > 0) {
+                if (!swiping) {
+                    startX = touchX[0];
+                    startY = touchY[0];
+                    swiping = true;
+                    lastTouchMillis = now;
+                }
+                currentX = touchX[0];
+                currentY = touchY[0];
+            } else if (swiping) {
                 finishGesture(bus);
             }
         }
