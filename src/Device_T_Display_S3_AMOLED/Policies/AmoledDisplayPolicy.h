@@ -6,6 +6,7 @@
 
 extern Arduino_DataBus *bus;
 extern Arduino_GFX *gfx;
+extern Arduino_Canvas *canvas;
 
 class AmoledDisplayPolicy {
 public:
@@ -33,10 +34,19 @@ public:
 #endif
 
         gfx->begin();
+
+        if (!canvas) {
+            canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
+            canvas->begin();
+        }
     }
     
     bool isHudMode = false;
-    void setRotation(uint8_t r) { gfx->setRotation(r); }
+    void setRotation(uint8_t r) {
+        if (canvas) canvas->setRotation(r);
+        else if (gfx) gfx->setRotation(r);
+    }
+    
     void setHudMode(bool hud) {
         if (isHudMode != hud) {
             isHudMode = hud;
@@ -47,24 +57,28 @@ public:
             }
         }
     }
-    void fillScreen(uint32_t color) { gfx->fillScreen(color); }
-    void setCursor(int16_t x, int16_t y) { gfx->setCursor(x, y); }
-    void setTextWrap(bool wrap) { gfx->setTextWrap(wrap); }
-    void setTextSize(uint8_t size) { gfx->setTextSize(size); }
-    void setTextColor(uint32_t c, uint32_t bg) { gfx->setTextColor(c, bg); }
-    void print(const char* str) { gfx->print(str); }
-    void print(int n) { gfx->print(n); }
-    void println(const char* str) { gfx->println(str); }
+    
+    void fillScreen(uint32_t color) { if (canvas) canvas->fillScreen(color); }
+    void setCursor(int16_t x, int16_t y) { if (canvas) canvas->setCursor(x, y); }
+    void setTextWrap(bool wrap) { if (canvas) canvas->setTextWrap(wrap); }
+    void setTextSize(uint8_t size) { if (canvas) canvas->setTextSize(size); }
+    void setTextColor(uint32_t c, uint32_t bg) { if (canvas) canvas->setTextColor(c, bg); }
+    void print(const char* str) { if (canvas) canvas->print(str); }
+    void print(int n) { if (canvas) canvas->print(n); }
+    void println(const char* str) { if (canvas) canvas->println(str); }
     
     int16_t textWidth(const char* str) { 
+        if (!canvas) return 0;
         int16_t x1, y1;
         uint16_t w, h;
-        gfx->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
+        canvas->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
         return w;
     }
     
+    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { if (canvas) canvas->fillRect(x, y, w, h, color); }
+    
     void fillArc(int16_t cx, int16_t cy, int16_t r1, int16_t r2, float startAngle, float endAngle, uint16_t color) {
-        if (r1 == r2) return;
+        if (!canvas || r1 == r2) return;
         if (r1 < r2) { int16_t tmp = r1; r1 = r2; r2 = tmp; }
         
         while (endAngle < startAngle) endAngle += 360.0f;
@@ -72,8 +86,7 @@ public:
         if (sweep <= 0.001f) return;
         if (sweep > 360.0f) sweep = 360.0f;
 
-        // 10-degree steps for instant, burst QSPI rendering without visible drawing steps
-        float step = 10.0f; 
+        float step = 2.0f; 
         int numSteps = (int)(sweep / step);
         if (numSteps < 1) numSteps = 1;
         float actualStep = sweep / numSteps;
@@ -89,7 +102,6 @@ public:
         int16_t x0_in  = cx + (int16_t)roundf(r2 * sin0);
         int16_t y0_in  = cy - (int16_t)roundf(r2 * cos0);
 
-        gfx->startWrite();
         for (int i = 1; i <= numSteps; i++) {
             float a = startAngle + i * actualStep;
             float rad1 = a * DEG2RAD;
@@ -101,23 +113,28 @@ public:
             int16_t x1_in  = cx + (int16_t)roundf(r2 * sin1);
             int16_t y1_in  = cy - (int16_t)roundf(r2 * cos1);
 
-            gfx->fillTriangle(x0_out, y0_out, x1_out, y1_out, x0_in, y0_in, color);
-            gfx->fillTriangle(x0_in, y0_in, x1_out, y1_out, x1_in, y1_in, color);
+            canvas->fillTriangle(x0_out, y0_out, x1_out, y1_out, x0_in, y0_in, color);
+            canvas->fillTriangle(x0_in, y0_in, x1_out, y1_out, x1_in, y1_in, color);
 
             x0_out = x1_out;
             y0_out = y1_out;
             x0_in  = x1_in;
             y0_in  = y1_in;
         }
-        gfx->endWrite();
     }
-    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { gfx->fillCircle(x, y, r, color); }
-    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { gfx->drawFastHLine(x, y, w, color); }
-    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) { gfx->drawFastVLine(x, y, h, color); }
     
-    int16_t width() { return gfx->width(); }
-    int16_t height() { return gfx->height(); }
-    void flush() { gfx->flush(); }
+    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { if (canvas) canvas->fillCircle(x, y, r, color); }
+    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { if (canvas) canvas->drawFastHLine(x, y, w, color); }
+    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) { if (canvas) canvas->drawFastVLine(x, y, h, color); }
+    
+    int16_t width() { return canvas ? canvas->width() : (gfx ? gfx->width() : LCD_WIDTH); }
+    int16_t height() { return canvas ? canvas->height() : (gfx ? gfx->height() : LCD_HEIGHT); }
+    
+    void flush() {
+        if (canvas) {
+            canvas->flush();
+        }
+    }
     
     void setBacklight(bool on) {
 #if defined(LCD_EN)
