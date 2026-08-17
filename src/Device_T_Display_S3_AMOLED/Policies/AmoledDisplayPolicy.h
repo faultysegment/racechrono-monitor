@@ -32,6 +32,9 @@ public:
         delay(50); // wait for power to stabilize
 #endif
 
+        gfx->begin();
+    }
+    
     bool isHudMode = false;
     void setRotation(uint8_t r) { gfx->setRotation(r); }
     void setHudMode(bool hud) {
