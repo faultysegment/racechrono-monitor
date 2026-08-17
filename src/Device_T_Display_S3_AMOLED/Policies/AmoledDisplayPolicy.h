@@ -40,7 +40,11 @@ public:
     void setHudMode(bool hud) {
         if (isHudMode != hud) {
             isHudMode = hud;
-            gfx->setRotation(hud ? 1 : 0);
+            if (bus) {
+                bus->beginWrite();
+                bus->writeC8D8(0x36, hud ? 0x02 : 0x00); // MADCTL 0x36: 0x02 = X_AXIS_FLIP (Horizontal Mirror)
+                bus->endWrite();
+            }
         }
     }
     void fillScreen(uint32_t color) { gfx->fillScreen(color); }
