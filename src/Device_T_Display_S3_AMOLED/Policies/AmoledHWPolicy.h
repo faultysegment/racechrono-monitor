@@ -77,7 +77,7 @@ struct AmoledHWPolicy {
     static void pollExtraEvents(EventBus& bus) {
         uint32_t now = ::millis();
         static uint32_t lastPoll = 0;
-        if (now - lastPoll < 5) return; // Poll at 200Hz
+        if (now - lastPoll < 15) return; // 60Hz max rate matching CST9217 HW
         lastPoll = now;
 
         // Only query I2C when touch INT pin is LOW or when tracking an active gesture

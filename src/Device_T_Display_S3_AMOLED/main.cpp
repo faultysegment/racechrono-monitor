@@ -32,7 +32,7 @@ void uiTask(void* pvParameters) {
 void inputTask(void* pvParameters) {
     while (1) {
         app.pollInput();
-        vTaskDelay(pdMS_TO_TICKS(5)); // High frequency 200Hz input polling
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
