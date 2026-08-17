@@ -157,9 +157,9 @@ public:
         if (force || lastBat != percent) {
             lastBat = percent;
             int screenW = width();
-            setTextSize(3);
-            setTextColor(0x7BEF, 0x0000);
-            setCursor(screenW - 150, 40);
+            setTextSize(2);
+            setTextColor(0xFFFF, 0x0000);
+            setCursor(screenW - 55, 10);
             char buf[16];
             if (percent >= 0 && percent <= 100) {
                 snprintf(buf, sizeof(buf), "%3d%%", percent);

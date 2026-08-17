@@ -25,11 +25,11 @@ public:
             char buf[32];
             snprintf(buf, sizeof(buf), "%.1f", currentLimit);
             
-            ui.textCenter("EDIT", 0xFFFF, 0.08f, 0.23f);
-            ui.textCenter(buf, 0xFFE0, 0.18f, 0.50f);
+            ui.textCenter("EDIT", 0xFFFF, 0.1f, 0.25f);
+            ui.textCenter(buf, 0xFFE0, 0.25f, 0.5f);
             
             ui.drawPlusMinus(0xFFFF);
-            ui.drawCheckmark(0x07E0);
+            ui.drawCheckmark(0x07E0); // Green Checkmark
             
             ui.circularBar(1.0f, 1.0f, 0x7BEF, 0x7BEF, 0.05f);
             
@@ -37,8 +37,8 @@ public:
             char buf[32];
             snprintf(buf, sizeof(buf), "%.1f", currentLimit);
             
-            ui.textCenter(title, 0xFFFF, 0.08f, 0.23f);
-            ui.textCenter(buf, 0x7BEF, 0.18f, 0.50f);
+            ui.textCenter(title, 0xFFFF, 0.1f, 0.25f);
+            ui.textCenter(buf, 0x7BEF, 0.25f, 0.5f);
             
             ui.circularBar(0, currentLimit, 0x0000, 0x7BEF, 0.1f);
         }

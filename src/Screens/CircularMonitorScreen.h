@@ -29,7 +29,7 @@ public:
         CircularUI<DisplayPolicy> ui(tft);
         
         if (state.nextMonitorId <= mIdx) {
-            ui.textCenter("WAIT", 0xFFFF, 0.12f, 0.5f);
+            ui.textCenter("WAIT", 0xFFFF, 0.15f, 0.5f);
             return;
         }
 
@@ -45,8 +45,8 @@ public:
             char buf[32];
             snprintf(buf, sizeof(buf), "%.1f", currentLimit);
             
-            ui.textCenter("LIMIT", 0xFFFF, 0.08f, 0.23f);
-            ui.textCenter(buf, 0xFFE0, 0.18f, 0.50f);
+            ui.textCenter("LIMIT", 0xFFFF, 0.1f, 0.25f);
+            ui.textCenter(buf, 0xFFE0, 0.25f, 0.5f);
             
             ui.drawPlusMinus(0xFFFF);
             ui.drawCheckmark(0x07E0);
@@ -56,8 +56,8 @@ public:
         } else {
             if (state.monitors[mIdx].hasException) {
                 tft.fillScreen(0x0000);
-                ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.08f, 0.23f);
-                ui.textCenter("ERR", 0xF800, 0.18f, 0.50f);
+                ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+                ui.textCenter("ERR", 0xF800, 0.3f, 0.5f);
                 ui.circularBar(0, currentLimit, 0x0000, 0x7BEF, 0.1f);
                 return;
             }
@@ -94,8 +94,8 @@ public:
                         snprintf(valBuf, sizeof(valBuf), "%+.1f", val);
                     }
 
-                    ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.08f, 0.23f);
-                    ui.textCenter(valBuf, color, 0.18f, 0.50f);
+                    ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+                    ui.textCenter(valBuf, color, 0.25f, 0.5f);
                     ui.circularBar(val, currentLimit, color, 0x7BEF, 0.1f);
                 } else {
                     // Differential update at 25Hz - instant, zero flicker, zero sweeping animation!
@@ -113,8 +113,8 @@ public:
                         int r = std::min(cx, cy) - ui.h(0.12f);
                         tft.fillCircle(cx, cy, r, 0x0000);
 
-                        ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.08f, 0.23f);
-                        ui.textCenter(valBuf, color, 0.18f, 0.50f);
+                        ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+                        ui.textCenter(valBuf, color, 0.25f, 0.5f);
 
                         ui.circularBarDiff(lastAngle, angle, color, 0x7BEF, 0.1f);
                         lastAngle = angle;
@@ -123,8 +123,8 @@ public:
                 }
             } else {
                 tft.fillScreen(0x0000);
-                ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.08f, 0.23f);
-                ui.textCenter("---", 0xFFFF, 0.18f, 0.50f);
+                ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+                ui.textCenter("---", 0xFFFF, 0.3f, 0.5f);
                 ui.circularBar(0, currentLimit, 0x0000, 0x7BEF, 0.1f);
             }
         }

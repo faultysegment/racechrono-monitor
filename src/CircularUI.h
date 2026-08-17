@@ -21,12 +21,12 @@ public:
     }
 
     int getBaseTextHeight() {
-        return 8;
+        return tft.height() > 320 ? 16 : 8;
     }
 
     int textSize(float percent) {
         int targetPixels = tft.height() * percent;
-        return std::max(1, (int)std::round((float)targetPixels / 8.0f));
+        return std::max(1, (int)std::round((float)targetPixels / getBaseTextHeight()));
     }
 
     void textCenter(const char* str, uint32_t color, float sizePercent, float offsetYPercent = 0.5f, uint32_t bg = 0x0000) {
@@ -81,14 +81,14 @@ public:
         int cy = tft.height() / 2;
         
         tft.setTextColor(color, 0x0000);
-        tft.setTextSize(textSize(0.12f));
+        tft.setTextSize(textSize(0.15f));
         
         // Draw Minus on the left
-        tft.setCursor(cx - w(0.32f), cy - h(0.06f));
+        tft.setCursor(cx - w(0.35f), cy - h(0.07f));
         tft.print("-");
         
         // Draw Plus on the right
-        tft.setCursor(cx + w(0.24f), cy - h(0.06f));
+        tft.setCursor(cx + w(0.28f), cy - h(0.07f));
         tft.print("+");
     }
 
@@ -97,10 +97,10 @@ public:
         int cy = tft.height() - h(0.2f);
         
         tft.setTextColor(color, 0x0000);
-        tft.setTextSize(textSize(0.08f));
+        tft.setTextSize(textSize(0.1f));
         
         int strW = tft.textWidth("OK");
-        tft.setCursor(cx - (strW / 2), cy);
+        tft.setCursor(cx - (strW/2), cy);
         tft.print("OK");
     }
 };
