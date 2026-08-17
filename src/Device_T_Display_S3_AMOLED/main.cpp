@@ -14,6 +14,7 @@
 
 Arduino_DataBus *bus = NULL;
 Arduino_GFX *gfx = NULL;
+Arduino_Canvas *canvas = NULL;
 
 App<AmoledDisplayPolicy, AmoledHWPolicy, AmoledBLEPolicy, AmoledStoragePolicy, AmoledViewPolicy<AmoledDisplayPolicy>> app;
 
