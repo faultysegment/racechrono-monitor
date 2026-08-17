@@ -63,9 +63,50 @@ public:
         return w;
     }
     
-    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { gfx->fillRect(x, y, w, h, color); }
-    void fillArc(int16_t x, int16_t y, int16_t r1, int16_t r2, float start, float end, uint16_t color) {
-        gfx->fillArc(x, y, r1, r2, start, end, color);
+    void fillArc(int16_t cx, int16_t cy, int16_t r1, int16_t r2, float startAngle, float endAngle, uint16_t color) {
+        if (r1 == r2) return;
+        if (r1 < r2) { int16_t tmp = r1; r1 = r2; r2 = tmp; }
+        
+        while (endAngle < startAngle) endAngle += 360.0f;
+        float sweep = endAngle - startAngle;
+        if (sweep <= 0.001f) return;
+        if (sweep > 360.0f) sweep = 360.0f;
+
+        float step = 2.0f; 
+        int numSteps = (int)(sweep / step);
+        if (numSteps < 1) numSteps = 1;
+        float actualStep = sweep / numSteps;
+
+        const float DEG2RAD = 3.14159265358979323846f / 180.0f;
+
+        float rad0 = startAngle * DEG2RAD;
+        float sin0 = sinf(rad0);
+        float cos0 = cosf(rad0);
+
+        int16_t x0_out = cx + (int16_t)roundf(r1 * sin0);
+        int16_t y0_out = cy - (int16_t)roundf(r1 * cos0);
+        int16_t x0_in  = cx + (int16_t)roundf(r2 * sin0);
+        int16_t y0_in  = cy - (int16_t)roundf(r2 * cos0);
+
+        for (int i = 1; i <= numSteps; i++) {
+            float a = startAngle + i * actualStep;
+            float rad1 = a * DEG2RAD;
+            float sin1 = sinf(rad1);
+            float cos1 = cosf(rad1);
+
+            int16_t x1_out = cx + (int16_t)roundf(r1 * sin1);
+            int16_t y1_out = cy - (int16_t)roundf(r1 * cos1);
+            int16_t x1_in  = cx + (int16_t)roundf(r2 * sin1);
+            int16_t y1_in  = cy - (int16_t)roundf(r2 * cos1);
+
+            gfx->fillTriangle(x0_out, y0_out, x1_out, y1_out, x0_in, y0_in, color);
+            gfx->fillTriangle(x0_in, y0_in, x1_out, y1_out, x1_in, y1_in, color);
+
+            x0_out = x1_out;
+            y0_out = y1_out;
+            x0_in  = x1_in;
+            y0_in  = y1_in;
+        }
     }
     void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { gfx->fillCircle(x, y, r, color); }
     void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { gfx->drawFastHLine(x, y, w, color); }
