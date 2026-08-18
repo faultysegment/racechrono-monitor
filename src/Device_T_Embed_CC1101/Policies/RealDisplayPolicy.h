@@ -11,7 +11,12 @@ public:
     void setHudMode(bool hud) {
         if (isHudMode != hud) {
             isHudMode = hud;
-            tft.setRotation(hud ? 7 : 3);
+            tft.writecommand(TFT_MADCTL);
+            if (hud) {
+                tft.writedata(TFT_MAD_MV | TFT_MAD_COLOR_ORDER);
+            } else {
+                tft.writedata(TFT_MAD_MV | TFT_MAD_MY | TFT_MAD_COLOR_ORDER);
+            }
         }
     }
     void fillScreen(uint32_t color) { tft.fillScreen(color); }

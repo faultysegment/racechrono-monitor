@@ -88,7 +88,6 @@ public:
 
 private:
     void update() {
-        tft.setHudMode(false);
         int currentIdx = 0;
         IScreen<DisplayPolicy>* activeScreen = nullptr;
         if (state.isConnected) {
@@ -110,6 +109,7 @@ private:
             lastEditMode = state.isEditMode;
             lastConnected = state.isConnected;
             
+            tft.setHudMode(false);
             activeScreen->onShow(tft, state);
             tft.drawBattery(state.batteryPercent, true);
         }
