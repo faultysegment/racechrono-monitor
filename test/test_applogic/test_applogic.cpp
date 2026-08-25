@@ -143,38 +143,75 @@ void test_applogic_edit_mode(void) {
 void test_applogic_screen_persistence() {
     setUp();
     MockStoragePolicy::reset();
+    logic.setup();
 
-    // Start with 4 connected screens
-    state.numConnectedScreens = 4;
+    // Start with 6 connected screens (3 base, 3 HUD) and 6 disconnected screens (3 base, 3 HUD)
+    state.numConnectedScreens = 6;
+    state.numDisconnectedScreens = 6;
     
     // Simulate BLE Connected
     testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_TRUE(state.isConnected);
-    state.numConnectedScreens = 4;
+    state.numConnectedScreens = 6;
+    state.numDisconnectedScreens = 6;
 
-    // Scroll to screen 2
+    // Scroll to screen 4 (Base screen 1 in HUD mode: 1 + 3 = 4)
     MockHWPolicy::navigationDelta = 1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
 
-    MockHWPolicy::navigationDelta = 1;
+    MockHWPolicy::navigationDelta = 3;
     logic.pollInput();
     flushEvents();
-    TEST_ASSERT_EQUAL(2, state.currentScreenIndex);
-    TEST_ASSERT_EQUAL(2, MockStoragePolicy::storeInt["last_screen"]);
+    TEST_ASSERT_EQUAL(4, state.currentScreenIndex);
+    
+    // Base screen 1 (4 % 3) and HUD mode 1 should be stored separately
+    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["last_screen"]);
+    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["hud_mode"]);
 
-    // Disconnect
+    // Disconnect -> should switch to HUD Disconnected screen (index 3: 6 / 2 = 3)
     testBus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_FALSE(state.isConnected);
+    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
 
-    // Reconnect - should restore screen index 2
+    // Reconnect -> should restore base screen 1 in HUD mode (1 + 3 = 4)
     testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_TRUE(state.isConnected);
-    TEST_ASSERT_EQUAL(2, state.currentScreenIndex);
+    TEST_ASSERT_EQUAL(4, state.currentScreenIndex);
+}
+
+void test_applogic_disconnected_hud_persistence() {
+    setUp();
+    MockStoragePolicy::reset();
+    logic.setup();
+    state.numConnectedScreens = 6;
+    state.numDisconnectedScreens = 6;
+
+    // 1. In disconnected state, scroll to HUD config screen (index 3)
+    state.isConnected = false;
+    MockHWPolicy::navigationDelta = 3;
+    logic.pollInput();
+    flushEvents();
+    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
+    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["hud_mode"]);
+
+    // 2. Simulate bootup / setup with hud_mode = 1
+    state.disconnectedScreenIndex = 0;
+    state.numDisconnectedScreens = 6;
+    state.numConnectedScreens = 6;
+    logic.setup();
+    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
+
+    // 3. Connect BLE -> connects directly to HUD mode for last_screen
+    MockStoragePolicy::storeInt["last_screen"] = 2; // Dual monitor
+    testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+    flushEvents();
+    TEST_ASSERT_TRUE(state.isConnected);
+    TEST_ASSERT_EQUAL(5, state.currentScreenIndex); // 2 + 3 = 5 (HUD Dual Monitor)
 }
 
 #ifdef ARDUINO
@@ -186,6 +223,7 @@ void setup() {
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_edit_mode);
     RUN_TEST(test_applogic_screen_persistence);
+    RUN_TEST(test_applogic_disconnected_hud_persistence);
     UNITY_END();
 }
 void loop() {}
@@ -197,8 +235,8 @@ int main(int argc, char **argv) {
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_edit_mode);
     RUN_TEST(test_applogic_screen_persistence);
+    RUN_TEST(test_applogic_disconnected_hud_persistence);
     UNITY_END();
     return 0;
 }
 #endif
-

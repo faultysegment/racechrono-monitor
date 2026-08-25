@@ -39,7 +39,8 @@ public:
         StoragePolicy::init();
         state.speedLimit = StoragePolicy::getFloat("limit_speed", 5.0f);
         state.timeLimit = StoragePolicy::getFloat("limit_time", 0.1f);
-        state.currentScreenIndex = StoragePolicy::getInt("last_screen", 0);
+        restoreDisconnectedScreen();
+        restoreConnectedScreen();
 
         HWPolicy::initBattery();
         state.batteryPercent = HWPolicy::getBatteryPercent();
@@ -137,12 +138,13 @@ public:
             case EventType::BLE_CONNECTED:
                 state.isConnected = true;
                 state.reset();
-                state.currentScreenIndex = StoragePolicy::getInt("last_screen", 0);
+                restoreConnectedScreen();
                 bus.push(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
                 break;
 
             case EventType::BLE_DISCONNECTED:
                 state.isConnected = false;
+                restoreDisconnectedScreen();
                 bus.push(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 ble.startAdvertising();
@@ -186,6 +188,29 @@ public:
     }
 
 private:
+    void restoreConnectedScreen() {
+        int baseScreen = StoragePolicy::getInt("last_screen", 0);
+        int hudMode = StoragePolicy::getInt("hud_mode", 0);
+        int numConnected = state.numConnectedScreens;
+        if (numConnected >= 2) {
+            int m = numConnected / 2;
+            baseScreen = (baseScreen % m + m) % m;
+            state.currentScreenIndex = (hudMode != 0) ? (baseScreen + m) : baseScreen;
+        } else {
+            state.currentScreenIndex = baseScreen;
+        }
+    }
+
+    void restoreDisconnectedScreen() {
+        int hudMode = StoragePolicy::getInt("hud_mode", 0);
+        int numDisc = state.numDisconnectedScreens;
+        if (hudMode != 0 && numDisc >= 2) {
+            state.disconnectedScreenIndex = numDisc / 2;
+        } else {
+            state.disconnectedScreenIndex = 0;
+        }
+    }
+
     void toggleEditMode() {
         state.isEditMode = !state.isEditMode;
         if (!state.isEditMode) {
@@ -199,20 +224,33 @@ private:
         if (state.isConnected) {
             int numConnected = state.numConnectedScreens;
             if (numConnected > 0) {
-                if (navDelta > 0) {
-                    state.currentScreenIndex = (state.currentScreenIndex + 1) % numConnected;
-                } else {
-                    state.currentScreenIndex = (state.currentScreenIndex - 1 + numConnected) % numConnected;
+                int newIndex = (state.currentScreenIndex + navDelta) % numConnected;
+                if (newIndex < 0) {
+                    newIndex += numConnected;
                 }
-                StoragePolicy::putInt("last_screen", state.currentScreenIndex);
+                state.currentScreenIndex = newIndex;
+                if (numConnected >= 2) {
+                    int m = numConnected / 2;
+                    int baseScreen = state.currentScreenIndex % m;
+                    bool isHud = (state.currentScreenIndex >= m);
+                    StoragePolicy::putInt("last_screen", baseScreen);
+                    StoragePolicy::putInt("hud_mode", isHud ? 1 : 0);
+                } else {
+                    StoragePolicy::putInt("last_screen", state.currentScreenIndex);
+                }
             }
         } else {
             int numDisconnected = state.numDisconnectedScreens;
             if (numDisconnected > 0) {
-                if (navDelta > 0) {
-                    state.disconnectedScreenIndex = (state.disconnectedScreenIndex + 1) % numDisconnected;
-                } else {
-                    state.disconnectedScreenIndex = (state.disconnectedScreenIndex - 1 + numDisconnected) % numDisconnected;
+                int newIndex = (state.disconnectedScreenIndex + navDelta) % numDisconnected;
+                if (newIndex < 0) {
+                    newIndex += numDisconnected;
+                }
+                state.disconnectedScreenIndex = newIndex;
+                if (numDisconnected >= 2) {
+                    int mDisc = numDisconnected / 2;
+                    bool isHud = (state.disconnectedScreenIndex >= mDisc);
+                    StoragePolicy::putInt("hud_mode", isHud ? 1 : 0);
                 }
             }
         }
@@ -222,18 +260,28 @@ private:
     void changeValue(int navDelta) {
         float change = (navDelta > 0) ? 0.1f : -0.1f;
         if (state.isConnected) {
-            if (state.currentScreenIndex < state.nextMonitorId) {
-                float* limitPtr = state.monitors[state.currentScreenIndex].limitPtr;
+            int numConnected = state.numConnectedScreens;
+            int baseIdx = state.currentScreenIndex;
+            if (numConnected >= 2) {
+                baseIdx = baseIdx % (numConnected / 2);
+            }
+            if (baseIdx < state.nextMonitorId) {
+                float* limitPtr = state.monitors[baseIdx].limitPtr;
                 if (limitPtr) {
                     *limitPtr += change;
                     if (*limitPtr < 0.1f) *limitPtr = 0.1f;
                 }
             }
         } else {
-            if (state.disconnectedScreenIndex == 1) { // Speed Config
+            int numDisc = state.numDisconnectedScreens;
+            int baseDisc = state.disconnectedScreenIndex;
+            if (numDisc >= 2) {
+                baseDisc = baseDisc % (numDisc / 2);
+            }
+            if (baseDisc == 1) { // Speed Config
                 state.speedLimit += change;
                 if (state.speedLimit < 0.1f) state.speedLimit = 0.1f;
-            } else if (state.disconnectedScreenIndex == 2) { // Time Config
+            } else if (baseDisc == 2) { // Time Config
                 state.timeLimit += change;
                 if (state.timeLimit < 0.1f) state.timeLimit = 0.1f;
             }
