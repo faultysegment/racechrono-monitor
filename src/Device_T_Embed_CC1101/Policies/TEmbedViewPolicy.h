@@ -4,46 +4,24 @@
 #include "Screens/MonitorScreen.h"
 #include "Screens/DualMonitorScreen.h"
 #include "Screens/DisconnectedMsgScreen.h"
-#include "Screens/ConfigMonitorScreen.h"
-#include "Screens/HudScreenWrapper.h"
 
 template <typename DisplayPolicy>
 class TEmbedViewPolicy {
     MonitorScreen<DisplayPolicy> monitor0{0};
     MonitorScreen<DisplayPolicy> monitor1{1};
     DualMonitorScreen<DisplayPolicy> dualMonitor;
-    
-    HudScreenWrapper<DisplayPolicy> hudMonitor0{&monitor0};
-    HudScreenWrapper<DisplayPolicy> hudMonitor1{&monitor1};
-    HudScreenWrapper<DisplayPolicy> hudDualMonitor{&dualMonitor};
 
     DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
-    ConfigMonitorScreen<DisplayPolicy> configSpeed;
-    ConfigMonitorScreen<DisplayPolicy> configTime;
-
-    HudScreenWrapper<DisplayPolicy> hudDisconnectedMsg{&disconnectedMsg};
-    HudScreenWrapper<DisplayPolicy> hudConfigSpeed{&configSpeed};
-    HudScreenWrapper<DisplayPolicy> hudConfigTime{&configTime};
 
 public:
-    TEmbedViewPolicy(AppState& state) 
-        : configSpeed("SPEED LIMIT", &state.speedLimit),
-          configTime("TIME LIMIT", &state.timeLimit) {}
+    TEmbedViewPolicy(AppState& state) {}
 
     template <typename HWPolicy>
     void setupScreens(View<DisplayPolicy, HWPolicy>& appView) {
         appView.addConnectedScreen(&monitor0);
         appView.addConnectedScreen(&monitor1);
         appView.addConnectedScreen(&dualMonitor);
-        appView.addConnectedScreen(&hudMonitor0);
-        appView.addConnectedScreen(&hudMonitor1);
-        appView.addConnectedScreen(&hudDualMonitor);
         
         appView.addDisconnectedScreen(&disconnectedMsg);
-        appView.addDisconnectedScreen(&configSpeed);
-        appView.addDisconnectedScreen(&configTime);
-        appView.addDisconnectedScreen(&hudDisconnectedMsg);
-        appView.addDisconnectedScreen(&hudConfigSpeed);
-        appView.addDisconnectedScreen(&hudConfigTime);
     }
 };

@@ -15,7 +15,8 @@ public:
         int cy = tft.height() / 2;
         int radiusOut = std::min(cx, cy) - 5;
         int radiusIn = radiusOut - ui.h(0.025f);
-        tft.fillArc(cx, cy, radiusOut, radiusIn, 0.0f, 360.0f, 0xF800);
+        tft.fillCircle(cx, cy, radiusOut, 0xF800);
+        tft.fillCircle(cx, cy, radiusIn, 0x0000);
         
         // Main status text (Big bold red, size 4)
         ui.textCenter("DISCONNECTED", 0xF800, 0.14f, 0.38f);

@@ -16,17 +16,28 @@ struct MockRect {
     uint32_t color;
 };
 
+struct MockCircle {
+    int16_t x, y, r;
+    uint32_t color;
+};
+
 class MockDisplayPolicy {
 public:
     static std::string lastPrint;
     static uint32_t lastFillScreenColor;
     static std::vector<MockRect> lastRects;
+    static std::vector<MockCircle> lastCircles;
+    static uint32_t lastTextColor;
+    static std::vector<uint32_t> allTextColors;
     static bool isHud;
 
     static void reset() {
         lastPrint = "";
         lastFillScreenColor = 0;
         lastRects.clear();
+        lastCircles.clear();
+        lastTextColor = 0;
+        allTextColors.clear();
         isHud = false;
     }
 
@@ -39,12 +50,15 @@ public:
     int currentTextSize = 1;
     void setTextSize(uint8_t size) { currentTextSize = size; }
     int16_t textWidth(const char* str) { return strlen(str) * 6 * currentTextSize; }
-    void setTextColor(uint32_t c, uint32_t bg) {}
+    void setTextColor(uint32_t c) { lastTextColor = c; allTextColors.push_back(c); }
+    void setTextColor(uint32_t c, uint32_t bg) { lastTextColor = c; allTextColors.push_back(c); }
     void print(const char* str) { lastPrint += str; }
     void print(int n) { lastPrint += std::to_string(n); }
     void println(const char* str) { lastPrint += str; lastPrint += "\n"; }
-    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) {}
-    void fillArc(int16_t x, int16_t y, int16_t r1, int16_t r2, float start, float end, uint16_t color) {}
+    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) {
+        lastCircles.push_back({x, y, r, color});
+    }
+
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) {
         lastRects.push_back({x, y, w, h, color});
     }
@@ -61,5 +75,8 @@ public:
 std::string MockDisplayPolicy::lastPrint = "";
 uint32_t MockDisplayPolicy::lastFillScreenColor = 0;
 std::vector<MockRect> MockDisplayPolicy::lastRects;
+std::vector<MockCircle> MockDisplayPolicy::lastCircles;
+uint32_t MockDisplayPolicy::lastTextColor = 0;
+std::vector<uint32_t> MockDisplayPolicy::allTextColors;
 bool MockDisplayPolicy::isHud = false;
 #endif

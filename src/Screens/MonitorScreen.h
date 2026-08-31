@@ -30,54 +30,44 @@ public:
             float* limitPtr = state.monitors[mIdx].limitPtr;
             float currentLimit = limitPtr ? *limitPtr : 1.0f;
             
-            if (state.isEditMode) {
+            if (state.monitors[mIdx].hasException) {
                 ui.setCursorY(0.25f);
-                char buf[32];
-                snprintf(buf, sizeof(buf), " LIM: %.1f  ", currentLimit);
-                ui.textCenter(buf, 0xFFE0, 0.20f);
+                ui.textCenter("   ERR   ", 0xF800, 0.20f);
                 
                 ui.setCursorY(0.70f);
                 ui.emptyBar(0x7BEF, 0.25f);
-            } else {
-                if (state.monitors[mIdx].hasException) {
-                    ui.setCursorY(0.25f);
-                    ui.textCenter("   ERR   ", 0xF800, 0.20f);
-                    
-                    ui.setCursorY(0.70f);
-                    ui.emptyBar(0x7BEF, 0.25f);
-                } else if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
-                    float val = (float)state.monitors[mIdx].value * state.monitors[mIdx].multiplier;
-                    
-                    uint32_t color = 0x7BEF; // DARKGREY
-                    if (val > 0) {
-                        color = state.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
-                    } else if (val < 0) {
-                        color = state.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
-                    }
-                    
-                    char valBuf[32];
-                    if (state.monitors[mIdx].decimals == 2) {
-                        snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
-                    } else {
-                        snprintf(valBuf, sizeof(valBuf), "   %+.1f   ", val);
-                    }
-                    
-                    ui.setCursorY(0.25f);
-                    ui.textCenter(valBuf, color, 0.20f);
-                    
-                    ui.setCursorY(0.70f);
-                    ui.bar(val, currentLimit, color, 0x7BEF, 0.25f);
-                } else {
-                    ui.setCursorY(0.25f);
-                    if (state.monitors[mIdx].decimals == 2) {
-                        ui.textCenter("   --.--   ", 0x7BEF, 0.20f);
-                    } else {
-                        ui.textCenter("   --.-   ", 0x7BEF, 0.20f);
-                    }
-                    
-                    ui.setCursorY(0.70f);
-                    ui.emptyBar(0x7BEF, 0.25f);
+            } else if (state.monitors[mIdx].value != AppState::INVALID_VALUE) {
+                float val = (float)state.monitors[mIdx].value * state.monitors[mIdx].multiplier;
+                
+                uint32_t color = 0x7BEF; // DARKGREY
+                if (val > 0) {
+                    color = state.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
+                } else if (val < 0) {
+                    color = state.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
                 }
+                
+                char valBuf[32];
+                if (state.monitors[mIdx].decimals == 2) {
+                    snprintf(valBuf, sizeof(valBuf), "   %+.2f   ", val);
+                } else {
+                    snprintf(valBuf, sizeof(valBuf), "   %+.1f   ", val);
+                }
+                
+                ui.setCursorY(0.25f);
+                ui.textCenter(valBuf, color, 0.20f);
+                
+                ui.setCursorY(0.70f);
+                ui.bar(val, currentLimit, color, 0x7BEF, 0.25f);
+            } else {
+                ui.setCursorY(0.25f);
+                if (state.monitors[mIdx].decimals == 2) {
+                    ui.textCenter("   --.--   ", 0x7BEF, 0.20f);
+                } else {
+                    ui.textCenter("   --.-   ", 0x7BEF, 0.20f);
+                }
+                
+                ui.setCursorY(0.70f);
+                ui.emptyBar(0x7BEF, 0.25f);
             }
         }
     }

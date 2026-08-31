@@ -13,20 +13,8 @@ public:
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {
-        static bool lastEditMode = false;
-        if (lastEditMode != state.isEditMode) {
-            tft.fillScreen(0x0000);
-            lastEditMode = state.isEditMode;
-        }
-
         UI<DisplayPolicy> ui(tft);
         ui.begin();
-
-        if (state.isEditMode) {
-            ui.setCursorY(0.4f); // 40%
-            ui.textCenter("EDIT ON SINGLE SCREEN", 0xFFE0, 0.10f);
-            return;
-        }
 
         float barH = 0.23f; 
         

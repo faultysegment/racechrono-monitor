@@ -1,7 +1,6 @@
 #include <unity.h>
 #include "../../src/AppState.h"
 #include "View.h"
-#include "../../src/Screens/HudScreenWrapper.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Native/Policies/NativeViewPolicy.h"
@@ -49,7 +48,7 @@ void test_view_update_bars(void) {
     state.setMonitorValue(1, 2); // 2 / 5 = 40%
     
     // Test rectangular monitor0 (Time)
-    state.currentScreenIndex = 3;
+    state.currentScreenIndex = 2;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
@@ -63,7 +62,7 @@ void test_view_update_bars(void) {
     }
 
     // Test rectangular monitor1 (Speed)
-    state.currentScreenIndex = 4;
+    state.currentScreenIndex = 3;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
@@ -85,32 +84,77 @@ void test_mock_display_hud_mode(void) {
     display.setHudMode(false);
     TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
 }
-void test_hud_screen_wrapper(void) {
-    MockDisplayPolicy display;
+
+void test_view_global_hud_mode(void) {
+    state.reset();
+    state.isHud = true;
+    state.isConnected = false;
     MockDisplayPolicy::reset();
-    MonitorScreen<MockDisplayPolicy> innerMonitor{0};
-    HudScreenWrapper<MockDisplayPolicy> hudWrapper(&innerMonitor);
 
-    state.isConnected = true;
-    state.speedLimit = 5.0f;
-    state.addMonitor("M1", 1.0f, "SPEED", true, 1, &state.speedLimit);
-    state.setMonitorValue(0, 10);
-
-    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
-    hudWrapper.onShow(display, state);
-    hudWrapper.onUpdate(display, state);
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::isHud);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
+
+    state.isHud = false;
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
 }
 
-void test_hud_screen_registration(void) {
+void test_screen_registration(void) {
     state.reset();
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView);
 
-    TEST_ASSERT_EQUAL(12, mockView.getNumConnectedScreens());
-    TEST_ASSERT_EQUAL(10, mockView.getNumDisconnectedScreens());
+    TEST_ASSERT_EQUAL(5, mockView.getNumConnectedScreens());
+    TEST_ASSERT_EQUAL(1, mockView.getNumDisconnectedScreens());
+}
+
+void test_circular_monitor_screen_radial_bar(void) {
+    state.reset();
+    state.isConnected = true;
+    state.isConfigured = true;
+    state.speedLimit = 5.0f;
+    state.timeLimit = 10.0f;
+    state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
+    state.setMonitorValue(0, 5); // 5 / 10 = 50%
+
+    // Screen 0 in NativeViewPolicy is circMonitor0
+    state.currentScreenIndex = 0;
+    MockDisplayPolicy::reset();
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+5.00") != std::string::npos);
+    TEST_ASSERT_EQUAL(TFT_BLUE, MockDisplayPolicy::lastTextColor); // Value text is always blue
+    // Radial bar draws outer circle (filledColor) and inner circle (0x0000)
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastCircles.size() >= 2);
+    if (MockDisplayPolicy::lastCircles.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastCircles[0].color); // Time positive is bad -> Red
+        TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastCircles[1].color); // Inner clear circle
+    }
+}
+
+void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
+    state.reset();
+    state.isConnected = true;
+    state.isConfigured = true;
+    state.speedLimit = 5.0f;
+    state.timeLimit = 100.0f;
+    state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
+    state.setMonitorValue(0, 1); // 1 / 100 = 1% -> clamped to 10% minimum
+
+    // Screen 0 in NativeViewPolicy is circMonitor0
+    state.currentScreenIndex = 0;
+    MockDisplayPolicy::reset();
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastCircles.size() >= 2);
+    if (MockDisplayPolicy::lastCircles.size() >= 2) {
+        int radiusOut = MockDisplayPolicy::lastCircles[0].r;
+        int rIn = MockDisplayPolicy::lastCircles[1].r;
+        int expectedRin = (int)std::round((float)radiusOut * 0.90f);
+        TEST_ASSERT_EQUAL(expectedRin, rIn);
+    }
 }
 
 #ifdef ARDUINO
@@ -121,8 +165,10 @@ void setup() {
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
-    RUN_TEST(test_hud_screen_wrapper);
-    RUN_TEST(test_hud_screen_registration);
+    RUN_TEST(test_view_global_hud_mode);
+    RUN_TEST(test_screen_registration);
+    RUN_TEST(test_circular_monitor_screen_radial_bar);
+    RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
 }
 void loop() {}
@@ -133,8 +179,10 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
     RUN_TEST(test_mock_display_hud_mode);
-    RUN_TEST(test_hud_screen_wrapper);
-    RUN_TEST(test_hud_screen_registration);
+    RUN_TEST(test_view_global_hud_mode);
+    RUN_TEST(test_screen_registration);
+    RUN_TEST(test_circular_monitor_screen_radial_bar);
+    RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
     return 0;
 }

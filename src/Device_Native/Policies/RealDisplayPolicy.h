@@ -71,23 +71,7 @@ public:
         }
     }
 
-    void fillArc(int x, int y, int r1, int r2, float startAngle, float endAngle, uint16_t color) {
-        setSDLColor(color);
-        // angles are in degrees. 0 = top, 90 = right.
-        float startRad = (startAngle - 90.0f) * M_PI / 180.0f;
-        float endRad = (endAngle - 90.0f) * M_PI / 180.0f;
-        
-        float step = 1.0f / (float)r1; // approx 1 pixel arc length
-        for (float a = startRad; a <= endRad; a += step) {
-            float ca = cos(a);
-            float sa = sin(a);
-            int x1 = x + ca * r2;
-            int y1 = y + sa * r2;
-            int x2 = x + ca * r1;
-            int y2 = y + sa * r1;
-            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
-        }
-    }
+
 
     void setCursor(int x, int y) {
         cursorX = x;
@@ -105,7 +89,12 @@ public:
         }
     }
 
-    void setTextColor(uint16_t color, uint16_t bg = 0x0000) {
+    void setTextColor(uint16_t color) {
+        textColor = color;
+        bgColor = color; // Triggers TTF_RenderText_Solid (transparent background)
+    }
+
+    void setTextColor(uint16_t color, uint16_t bg) {
         textColor = color;
         bgColor = bg;
     }

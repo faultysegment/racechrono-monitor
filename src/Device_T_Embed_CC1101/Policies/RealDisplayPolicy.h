@@ -23,6 +23,7 @@ public:
     void setCursor(int16_t x, int16_t y) { tft.setCursor(x, y); }
     void setTextWrap(bool wrap) { tft.setTextWrap(wrap); }
     void setTextSize(uint8_t size) { tft.setTextSize(size); }
+    void setTextColor(uint32_t c) { tft.setTextColor(c); }
     void setTextColor(uint32_t c, uint32_t bg) { tft.setTextColor(c, bg); }
     void print(const char* str) { tft.print(str); }
     void print(int n) { tft.print(n); }

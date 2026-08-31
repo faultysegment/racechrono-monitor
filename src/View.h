@@ -9,7 +9,7 @@
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
 public:
-    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastEditMode(false), lastConnected(false) {}
+    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastConnected(false) {}
 
     void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
         connectedScreens.push_back(screen);
@@ -103,13 +103,13 @@ private:
         }
         if (!activeScreen) return;
 
-        if (!displayStarted || lastScreenIndex != currentIdx || lastEditMode != state.isEditMode || lastConnected != state.isConnected) {
+        tft.setHudMode(state.isHud);
+
+        if (!displayStarted || lastScreenIndex != currentIdx || lastConnected != state.isConnected) {
             displayStarted = true;
             lastScreenIndex = currentIdx;
-            lastEditMode = state.isEditMode;
             lastConnected = state.isConnected;
             
-            tft.setHudMode(false);
             activeScreen->onShow(tft, state);
             tft.drawBattery(state.batteryPercent, true);
         }
@@ -129,7 +129,6 @@ private:
     DisplayPolicy tft;
     bool displayStarted;
     int lastScreenIndex;
-    bool lastEditMode;
     bool lastConnected;
 
     std::vector<IScreen<DisplayPolicy>*> connectedScreens;
