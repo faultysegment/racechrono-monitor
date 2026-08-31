@@ -39,7 +39,7 @@ public:
         if (state.monitors[mIdx].hasException) {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+            ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
             ui.textCenter("ERR", 0xF800, 0.3f, 0.5f);
             return;
         }
@@ -78,7 +78,7 @@ public:
                 int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
 
                 // Adjust contrast when radial bar closes into the center
-                uint32_t titleColor = (rIn < ui.h(0.35f)) ? 0x0000 : 0xFFFF;
+                uint32_t titleColor = (rIn < ui.h(0.35f)) ? 0x0000 : 0x001F;
 
                 ui.textCenter(state.monitors[mIdx].title, titleColor, 0.1f, 0.25f);
                 ui.textCenter(valBuf, 0x001F, 0.25f, 0.5f);
@@ -86,7 +86,7 @@ public:
         } else {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, 0xFFFF, 0.1f, 0.25f);
+            ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
             ui.textCenter("---", 0xFFFF, 0.3f, 0.5f);
         }
     }
