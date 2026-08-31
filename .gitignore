@@ -4,10 +4,12 @@
 .piolibdeps/
 
 # VS Code
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/ipch/
-.vscode/.browse.c_cpp.db*
+.vscode/
+
+# AI Agent & Tools
+.gemini/
+.agents/
+docs/
 
 # Build artifacts
 *.o

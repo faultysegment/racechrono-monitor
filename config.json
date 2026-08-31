@@ -30,8 +30,8 @@
     {
       "type": "single",
       "monitor": "speed_delta",
-      "positive_color": "#00FFFF",
-      "negative_color": "#FFA500",
+      "positive_color": "#00FF00",
+      "negative_color": "#FF0000",
       "title_color": "#0000FF",
       "value_color": "#0000FF"
     },
