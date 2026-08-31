@@ -20,7 +20,8 @@ void test_appstate_initialization(void) {
     TEST_ASSERT_FALSE(state.isConfiguring);
     TEST_ASSERT_EQUAL(0, state.currentScreenIndex);
     TEST_ASSERT_EQUAL(0, state.disconnectedScreenIndex);
-    TEST_ASSERT_FALSE(state.isEditMode);
+    TEST_ASSERT_FALSE(state.isHud);
+    TEST_ASSERT_EQUAL(0, state.numMonitorConfigs);
 }
 
 void test_add_monitor(void) {
@@ -49,6 +50,30 @@ void test_set_monitor_value(void) {
     TEST_ASSERT_EQUAL(12345, state.monitors[0].value);
 }
 
+void test_appstate_monitor_configs(void) {
+    AppState s;
+    s.reset();
+    TEST_ASSERT_EQUAL(0, s.numMonitorConfigs);
+    TEST_ASSERT_FALSE(s.isHud);
+
+    s.isHud = true;
+    TEST_ASSERT_TRUE(s.isHud);
+
+    MonitorConfig cfg;
+    strncpy(cfg.name, "Delta time", sizeof(cfg.name));
+    strncpy(cfg.title, "TIME", sizeof(cfg.title));
+    strncpy(cfg.formula, "channel(device(lap), delta_lap_time)*100.0", sizeof(cfg.formula));
+    cfg.multiplier = 0.01f;
+    cfg.positiveIsGood = false;
+    cfg.decimals = 2;
+    cfg.limit = 0.1f;
+
+    s.addMonitorConfig(cfg);
+    TEST_ASSERT_EQUAL(1, s.numMonitorConfigs);
+    TEST_ASSERT_EQUAL_STRING("TIME", s.monitorConfigs[0].title);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.1f, s.monitorConfigs[0].limit);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -57,6 +82,7 @@ void setup() {
     RUN_TEST(test_add_monitor);
     RUN_TEST(test_add_max_monitors);
     RUN_TEST(test_set_monitor_value);
+    RUN_TEST(test_appstate_monitor_configs);
     UNITY_END();
 }
 void loop() {}
@@ -67,6 +93,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_add_monitor);
     RUN_TEST(test_add_max_monitors);
     RUN_TEST(test_set_monitor_value);
+    RUN_TEST(test_appstate_monitor_configs);
     UNITY_END();
     return 0;
 }

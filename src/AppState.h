@@ -6,6 +6,16 @@
 #define MAX_MONITORS 10
 #define MONITOR_NAME_MAX 31
 
+struct MonitorConfig {
+    char name[MONITOR_NAME_MAX + 1];
+    char title[16];
+    char formula[128];
+    float multiplier;
+    bool positiveIsGood;
+    int decimals;
+    float limit;
+};
+
 class AppState {
 public:
     static const int32_t INVALID_VALUE = 2147483647;
@@ -17,6 +27,7 @@ public:
         int32_t value;
         bool positiveIsGood;
         int decimals;
+        float limit;
         float* limitPtr;
         bool hasException;
     };
@@ -24,13 +35,16 @@ public:
     Monitor monitors[MAX_MONITORS];
     int nextMonitorId;
 
+    MonitorConfig monitorConfigs[MAX_MONITORS];
+    int numMonitorConfigs;
+    bool isHud;
+
     bool isConnected;
     bool isConfiguring;
     bool isConfigured;
     
     int currentScreenIndex;
     int disconnectedScreenIndex;
-    bool isEditMode;
     
     int batteryPercent;
 
@@ -43,7 +57,8 @@ public:
     AppState() {
         isConnected = false;
         disconnectedScreenIndex = 0;
-        isEditMode = false;
+        isHud = false;
+        numMonitorConfigs = 0;
         batteryPercent = -1;
         numConnectedScreens = 0;
         numDisconnectedScreens = 0;
@@ -59,6 +74,18 @@ public:
         resetMonitors();
     }
 
+    void clearMonitorConfigs() {
+        numMonitorConfigs = 0;
+    }
+
+    bool addMonitorConfig(const MonitorConfig& cfg) {
+        if (numMonitorConfigs < MAX_MONITORS) {
+            monitorConfigs[numMonitorConfigs++] = cfg;
+            return true;
+        }
+        return false;
+    }
+
     void resetMonitors() {
         nextMonitorId = 0;
         for (int i = 0; i < MAX_MONITORS; i++) {
@@ -68,7 +95,8 @@ public:
             memset(monitors[i].title, 0, sizeof(monitors[i].title));
             monitors[i].positiveIsGood = false;
             monitors[i].decimals = 1;
-            monitors[i].limitPtr = nullptr;
+            monitors[i].limit = 0.1f;
+            monitors[i].limitPtr = &monitors[i].limit;
             monitors[i].hasException = false;
         }
     }
@@ -82,7 +110,12 @@ public:
             monitors[nextMonitorId].multiplier = multiplier;
             monitors[nextMonitorId].positiveIsGood = positiveIsGood;
             monitors[nextMonitorId].decimals = decimals;
-            monitors[nextMonitorId].limitPtr = limitPtr;
+            if (limitPtr) {
+                monitors[nextMonitorId].limit = *limitPtr;
+                monitors[nextMonitorId].limitPtr = limitPtr;
+            } else {
+                monitors[nextMonitorId].limitPtr = &monitors[nextMonitorId].limit;
+            }
             monitors[nextMonitorId].value = INVALID_VALUE;
             monitors[nextMonitorId].hasException = false;
             nextMonitorId++;
