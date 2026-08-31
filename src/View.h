@@ -21,6 +21,14 @@ public:
         state.numDisconnectedScreens = disconnectedScreens.size();
     }
 
+    void clearScreens() {
+        connectedScreens.clear();
+        disconnectedScreens.clear();
+        state.numConnectedScreens = 0;
+        state.numDisconnectedScreens = 0;
+        lastScreenIndex = -1;
+    }
+
     int getNumConnectedScreens() const {
         return connectedScreens.size();
     }

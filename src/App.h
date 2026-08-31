@@ -6,7 +6,6 @@
 #include "Screens/MonitorScreen.h"
 #include "Screens/DualMonitorScreen.h"
 #include "Screens/DisconnectedMsgScreen.h"
-#include "Screens/ConfigMonitorScreen.h"
 #include "EventBus.h"
 
 template <typename DisplayPolicy, typename HWPolicy, typename BLEPolicy, typename StoragePolicy, typename ViewPolicy>
@@ -19,12 +18,16 @@ class App {
     
 public:
     App() : appView(state), appLogic(state, eventBus), viewPolicy(state) {
-        viewPolicy.setupScreens(appView);
+        viewPolicy.setupScreens(appView, state);
     }
 
     void setup() {
         appView.init();
         appLogic.setup();
+        viewPolicy.setupScreens(appView, state);
+        if (state.currentScreenIndex >= state.numConnectedScreens) {
+            state.currentScreenIndex = 0;
+        }
     }
 
     void pollInput() {

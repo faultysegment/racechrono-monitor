@@ -41,7 +41,7 @@ void setUp(void) {
     while(testBus.try_pop(e)) {}
 
     if (view.getNumConnectedScreens() == 0) {
-        viewPolicy.setupScreens(view);
+        viewPolicy.setupScreens(view, state);
     }
 }
 

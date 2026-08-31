@@ -19,7 +19,7 @@ void setUp(void) {
     MockHWPolicy::reset();
 
     if (view.getNumConnectedScreens() == 0) {
-        viewPolicy.setupScreens(view);
+        viewPolicy.setupScreens(view, state);
     }
 }
 
@@ -101,11 +101,23 @@ void test_view_global_hud_mode(void) {
 
 void test_screen_registration(void) {
     state.reset();
+    state.numMonitorConfigs = 2;
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
-    policy.setupScreens(mockView);
+    policy.setupScreens(mockView, state);
 
     TEST_ASSERT_EQUAL(5, mockView.getNumConnectedScreens());
+    TEST_ASSERT_EQUAL(1, mockView.getNumDisconnectedScreens());
+}
+
+void test_screen_registration_single_monitor(void) {
+    state.reset();
+    state.numMonitorConfigs = 1;
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    policy.setupScreens(mockView, state);
+
+    TEST_ASSERT_EQUAL(2, mockView.getNumConnectedScreens()); // circ0 + rect0
     TEST_ASSERT_EQUAL(1, mockView.getNumDisconnectedScreens());
 }
 
@@ -167,6 +179,7 @@ void setup() {
     RUN_TEST(test_mock_display_hud_mode);
     RUN_TEST(test_view_global_hud_mode);
     RUN_TEST(test_screen_registration);
+    RUN_TEST(test_screen_registration_single_monitor);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
@@ -181,6 +194,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_mock_display_hud_mode);
     RUN_TEST(test_view_global_hud_mode);
     RUN_TEST(test_screen_registration);
+    RUN_TEST(test_screen_registration_single_monitor);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
