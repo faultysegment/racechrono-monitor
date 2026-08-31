@@ -20,10 +20,10 @@ public:
         for (int i = 0; i < state.numScreenConfigs && i < MAX_SCREENS; ++i) {
             const auto& sc = state.screenConfigs[i];
             if (sc.type == ScreenType::SINGLE) {
-                singleScreens[i].setMonitorIndex(sc.primaryMonitorIndex);
+                singleScreens[i].setConfig(sc.primary);
                 appView.addConnectedScreen(&singleScreens[i]);
             } else if (sc.type == ScreenType::DUAL) {
-                dualScreens[i].setMonitors(sc.primaryMonitorIndex, sc.secondaryMonitorIndex);
+                dualScreens[i].setSlots(sc.primary, sc.secondary);
                 appView.addConnectedScreen(&dualScreens[i]);
             }
         }

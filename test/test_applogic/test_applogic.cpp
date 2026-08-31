@@ -152,7 +152,7 @@ void test_applogic_json_config_custom_monitors(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, state.monitorConfigs[0].limit);
     TEST_ASSERT_EQUAL(1, state.numScreenConfigs);
     TEST_ASSERT_EQUAL(ScreenType::SINGLE, state.screenConfigs[0].type);
-    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].primaryMonitorIndex);
+    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].primary.monitorIndex);
 }
 
 void test_applogic_json_custom_screens(void) {
@@ -181,8 +181,27 @@ void test_applogic_json_custom_screens(void) {
             }
         ],
         "screens": [
-            { "type": "dual", "top": "delta_speed", "bottom": "delta_time" },
-            { "type": "single", "monitor": "delta_speed" }
+            {
+                "type": "dual",
+                "top": {
+                    "monitor": "delta_speed",
+                    "positive_color": "#00FFFF",
+                    "negative_color": "#FFA500"
+                },
+                "bottom": {
+                    "monitor": "delta_time",
+                    "positive_color": "#FF0000",
+                    "negative_color": "#00FF00"
+                }
+            },
+            {
+                "type": "single",
+                "monitor": "delta_speed",
+                "positive_color": "#00FFFF",
+                "negative_color": "#FFA500",
+                "title_color": "#0000FF",
+                "value_color": "#FFFFFF"
+            }
         ]
     })json";
 
@@ -190,14 +209,22 @@ void test_applogic_json_custom_screens(void) {
     TEST_ASSERT_EQUAL(2, state.numMonitorConfigs);
     TEST_ASSERT_EQUAL(2, state.numScreenConfigs);
 
-    // Screen 0 is dual with top=speed (idx 1) and bottom=time (idx 0)
+    // Screen 0 is dual with top=speed (idx 1, cyan/orange) and bottom=time (idx 0, red/green)
     TEST_ASSERT_EQUAL(ScreenType::DUAL, state.screenConfigs[0].type);
-    TEST_ASSERT_EQUAL(1, state.screenConfigs[0].primaryMonitorIndex);
-    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].secondaryMonitorIndex);
+    TEST_ASSERT_EQUAL(1, state.screenConfigs[0].primary.monitorIndex);
+    TEST_ASSERT_EQUAL(0x07FF, state.screenConfigs[0].primary.positiveColor); // Cyan
+    TEST_ASSERT_EQUAL(0xFD20, state.screenConfigs[0].primary.negativeColor); // Orange
+    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].secondary.monitorIndex);
+    TEST_ASSERT_EQUAL(0xF800, state.screenConfigs[0].secondary.positiveColor); // Red
+    TEST_ASSERT_EQUAL(0x07E0, state.screenConfigs[0].secondary.negativeColor); // Green
 
     // Screen 1 is single with monitor=speed (idx 1)
     TEST_ASSERT_EQUAL(ScreenType::SINGLE, state.screenConfigs[1].type);
-    TEST_ASSERT_EQUAL(1, state.screenConfigs[1].primaryMonitorIndex);
+    TEST_ASSERT_EQUAL(1, state.screenConfigs[1].primary.monitorIndex);
+    TEST_ASSERT_EQUAL(0x07FF, state.screenConfigs[1].primary.positiveColor);
+    TEST_ASSERT_EQUAL(0xFD20, state.screenConfigs[1].primary.negativeColor);
+    TEST_ASSERT_EQUAL(0x001F, state.screenConfigs[1].primary.titleColor); // Blue
+    TEST_ASSERT_EQUAL(0xFFFF, state.screenConfigs[1].primary.valueColor); // White
 }
 
 void test_applogic_json_config_fallback_defaults(void) {

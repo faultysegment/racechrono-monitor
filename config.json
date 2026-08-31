@@ -6,23 +6,47 @@
       "title": "TIME",
       "formula": "channel(device(lap), delta_lap_time)*100.0",
       "multiplier": 0.01,
-      "positive_is_good": false,
       "decimals": 2,
-      "limit": 0.5
+      "limit": 0.3
     },
     {
       "id": "speed_delta",
       "title": "SPEED",
       "formula": "channel(device(calc), delta_speed)*100",
       "multiplier": 0.036,
-      "positive_is_good": true,
       "decimals": 1,
       "limit": 1.0
     }
   ],
   "screens": [
-    { "type": "single", "monitor": "lap_delta" },
-    { "type": "single", "monitor": "speed_delta" },
-    { "type": "dual", "top": "lap_delta", "bottom": "speed_delta" }
+    {
+      "type": "single",
+      "monitor": "lap_delta",
+      "positive_color": "#FF0000",
+      "negative_color": "#00FF00",
+      "title_color": "#0000FF",
+      "value_color": "#0000FF"
+    },
+    {
+      "type": "single",
+      "monitor": "speed_delta",
+      "positive_color": "#00FFFF",
+      "negative_color": "#FFA500",
+      "title_color": "#0000FF",
+      "value_color": "#0000FF"
+    },
+    {
+      "type": "dual",
+      "top": {
+        "monitor": "lap_delta",
+        "positive_color": "#FF0000",
+        "negative_color": "#00FF00"
+      },
+      "bottom": {
+        "monitor": "speed_delta",
+        "positive_color": "#00FFFF",
+        "negative_color": "#FFA500"
+      }
+    }
   ]
 }

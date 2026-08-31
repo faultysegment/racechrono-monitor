@@ -7,17 +7,24 @@
 
 template <typename DisplayPolicy>
 class CircularMonitorScreen : public IScreen<DisplayPolicy> {
-    int mIdx;
+    ScreenSlotConfig mSlot;
     float lastVal;
     uint32_t lastColor;
     bool forceFullRedraw;
 
 public:
     CircularMonitorScreen(int monitorIndex = 0) 
-        : mIdx(monitorIndex), lastVal(-9999.0f), lastColor(0), forceFullRedraw(true) {}
+        : mSlot(monitorIndex), lastVal(-9999.0f), lastColor(0), forceFullRedraw(true) {}
+
+    CircularMonitorScreen(const ScreenSlotConfig& slot)
+        : mSlot(slot), lastVal(-9999.0f), lastColor(0), forceFullRedraw(true) {}
+
+    void setConfig(const ScreenSlotConfig& slot) {
+        mSlot = slot;
+    }
 
     void setMonitorIndex(int idx) {
-        mIdx = idx;
+        mSlot.monitorIndex = idx;
     }
 
     void onShow(DisplayPolicy& tft, AppState& state) override {
@@ -29,8 +36,9 @@ public:
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {
         CircularUI<DisplayPolicy> ui(tft);
+        int mIdx = mSlot.monitorIndex;
         
-        if (state.nextMonitorId <= mIdx) {
+        if (mIdx < 0 || state.nextMonitorId <= mIdx) {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, 1.0f, 0x0000, 0x7BEF);
             ui.textCenter("WAIT", 0xFFFF, 0.15f, 0.5f);
@@ -43,7 +51,7 @@ public:
         if (state.monitors[mIdx].hasException) {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
+            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
             ui.textCenter("ERR", 0xF800, 0.3f, 0.5f);
             return;
         }
@@ -53,9 +61,9 @@ public:
             
             uint32_t color = 0x7BEF;
             if (val > 0) {
-                color = state.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800;
+                color = mSlot.positiveColor;
             } else if (val < 0) {
-                color = state.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0;
+                color = mSlot.negativeColor;
             }
 
             if (forceFullRedraw || color != lastColor || std::abs(val - lastVal) >= 0.01f) {
@@ -81,13 +89,13 @@ public:
                 float pct = (currentLimit > 0.0001f) ? (absVal / currentLimit) : 0.0f;
                 int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
 
-                ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
-                ui.textCenter(valBuf, 0x001F, 0.25f, 0.5f);
+                ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
+                ui.textCenter(valBuf, mSlot.valueColor, 0.25f, 0.5f);
             }
         } else {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
+            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
             ui.textCenter("---", 0xFFFF, 0.3f, 0.5f);
         }
     }

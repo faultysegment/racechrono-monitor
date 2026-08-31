@@ -6,12 +6,17 @@
 
 template <typename DisplayPolicy>
 class MonitorScreen : public IScreen<DisplayPolicy> {
-    int mIdx;
+    ScreenSlotConfig mSlot;
 public:
-    MonitorScreen(int monitorIndex = 0) : mIdx(monitorIndex) {}
+    MonitorScreen(int monitorIndex = 0) : mSlot(monitorIndex) {}
+    MonitorScreen(const ScreenSlotConfig& slot) : mSlot(slot) {}
+
+    void setConfig(const ScreenSlotConfig& slot) {
+        mSlot = slot;
+    }
 
     void setMonitorIndex(int idx) {
-        mIdx = idx;
+        mSlot.monitorIndex = idx;
     }
 
     void onShow(DisplayPolicy& tft, AppState& state) override {
@@ -19,15 +24,16 @@ public:
         UI<DisplayPolicy> ui(tft);
         ui.begin();
         ui.space(0.05f); // 5% spacing
-        if (state.nextMonitorId > mIdx) {
-            ui.textLeft(state.monitors[mIdx].title, 0xFFFF, 0.15f, 0.05f);
+        if (state.nextMonitorId > mSlot.monitorIndex && mSlot.monitorIndex >= 0) {
+            ui.textLeft(state.monitors[mSlot.monitorIndex].title, mSlot.titleColor, 0.15f, 0.05f);
         } else {
             ui.textLeft("WAIT", 0xFFFF, 0.15f, 0.05f);
         }
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {
-        if (state.nextMonitorId > mIdx) {
+        int mIdx = mSlot.monitorIndex;
+        if (mIdx >= 0 && state.nextMonitorId > mIdx) {
             UI<DisplayPolicy> ui(tft);
             ui.begin();
             
@@ -45,9 +51,9 @@ public:
                 
                 uint32_t color = 0x7BEF; // DARKGREY
                 if (val > 0) {
-                    color = state.monitors[mIdx].positiveIsGood ? 0x07E0 : 0xF800; // GREEN : RED
+                    color = mSlot.positiveColor;
                 } else if (val < 0) {
-                    color = state.monitors[mIdx].positiveIsGood ? 0xF800 : 0x07E0; // RED : GREEN
+                    color = mSlot.negativeColor;
                 }
                 
                 char valBuf[32];

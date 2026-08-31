@@ -20,9 +20,9 @@ void setUp(void) {
 
     state.clearMonitorConfigs();
     state.clearScreenConfigs();
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
-    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}});
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}});
 
     viewPolicy.setupScreens(view, state);
 }
@@ -106,9 +106,9 @@ void test_view_global_hud_mode(void) {
 void test_screen_registration(void) {
     state.reset();
     state.clearScreenConfigs();
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
-    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}});
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}});
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
@@ -121,7 +121,7 @@ void test_screen_registration(void) {
 void test_screen_registration_single_monitor(void) {
     state.reset();
     state.clearScreenConfigs();
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
@@ -134,8 +134,8 @@ void test_screen_registration_single_monitor(void) {
 void test_view_custom_screen_composition(void) {
     state.reset();
     state.clearScreenConfigs();
-    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 1, 0}); // top: SPEED (idx 1), btm: TIME (idx 0)
-    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1}); // single: SPEED (idx 1)
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}}); // top: SPEED (idx 1), btm: TIME (idx 0)
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}}); // single: SPEED (idx 1)
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);

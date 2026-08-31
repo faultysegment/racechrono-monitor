@@ -17,7 +17,7 @@ public:
         appView.clearScreens();
         for (int i = 0; i < state.numScreenConfigs && i < MAX_SCREENS; ++i) {
             const auto& sc = state.screenConfigs[i];
-            singleScreens[i].setMonitorIndex(sc.primaryMonitorIndex);
+            singleScreens[i].setConfig(sc.primary);
             appView.addConnectedScreen(&singleScreens[i]);
         }
         appView.addDisconnectedScreen(&disconnectedMsg);

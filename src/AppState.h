@@ -23,10 +23,21 @@ enum class ScreenType {
     DUAL
 };
 
+struct ScreenSlotConfig {
+    int monitorIndex;
+    uint16_t positiveColor;
+    uint16_t negativeColor;
+    uint16_t titleColor;
+    uint16_t valueColor;
+
+    ScreenSlotConfig(int idx = -1, uint16_t posColor = 0xF800, uint16_t negColor = 0x07E0, uint16_t tColor = 0x001F, uint16_t vColor = 0x001F)
+        : monitorIndex(idx), positiveColor(posColor), negativeColor(negColor), titleColor(tColor), valueColor(vColor) {}
+};
+
 struct ScreenConfig {
     ScreenType type;
-    int primaryMonitorIndex;   // Index into state.monitors (0 .. MAX_MONITORS - 1)
-    int secondaryMonitorIndex; // For DUAL screens (-1 if unused)
+    ScreenSlotConfig primary;
+    ScreenSlotConfig secondary;
 };
 
 class AppState {

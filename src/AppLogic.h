@@ -2,6 +2,7 @@
 
 #include "AppState.h"
 #include "EventBus.h"
+#include "ColorUtils.h"
 #include <ArduinoJson.h>
 #include <string>
 #include <cstring>
@@ -201,24 +202,48 @@ public:
             "      \"title\": \"TIME\",\n"
             "      \"formula\": \"channel(device(lap), delta_lap_time)*100.0\",\n"
             "      \"multiplier\": 0.01,\n"
-            "      \"positive_is_good\": false,\n"
             "      \"decimals\": 2,\n"
-            "      \"limit\": 0.5\n"
+            "      \"limit\": 0.3\n"
             "    },\n"
             "    {\n"
             "      \"id\": \"speed_delta\",\n"
             "      \"title\": \"SPEED\",\n"
             "      \"formula\": \"channel(device(calc), delta_speed)*100\",\n"
             "      \"multiplier\": 0.036,\n"
-            "      \"positive_is_good\": true,\n"
             "      \"decimals\": 1,\n"
             "      \"limit\": 1.0\n"
             "    }\n"
             "  ],\n"
             "  \"screens\": [\n"
-            "    { \"type\": \"single\", \"monitor\": \"lap_delta\" },\n"
-            "    { \"type\": \"single\", \"monitor\": \"speed_delta\" },\n"
-            "    { \"type\": \"dual\", \"top\": \"lap_delta\", \"bottom\": \"speed_delta\" }\n"
+            "    {\n"
+            "      \"type\": \"single\",\n"
+            "      \"monitor\": \"lap_delta\",\n"
+            "      \"positive_color\": \"#FF0000\",\n"
+            "      \"negative_color\": \"#00FF00\",\n"
+            "      \"title_color\": \"#0000FF\",\n"
+            "      \"value_color\": \"#0000FF\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"type\": \"single\",\n"
+            "      \"monitor\": \"speed_delta\",\n"
+            "      \"positive_color\": \"#00FFFF\",\n"
+            "      \"negative_color\": \"#FFA500\",\n"
+            "      \"title_color\": \"#0000FF\",\n"
+            "      \"value_color\": \"#0000FF\"\n"
+            "    },\n"
+            "    {\n"
+            "      \"type\": \"dual\",\n"
+            "      \"top\": {\n"
+            "        \"monitor\": \"lap_delta\",\n"
+            "        \"positive_color\": \"#FF0000\",\n"
+            "        \"negative_color\": \"#00FF00\"\n"
+            "      },\n"
+            "      \"bottom\": {\n"
+            "        \"monitor\": \"speed_delta\",\n"
+            "        \"positive_color\": \"#00FFFF\",\n"
+            "        \"negative_color\": \"#FFA500\"\n"
+            "      }\n"
+            "    }\n"
             "  ]\n"
             "}\n";
         StoragePolicy::writeConfigFile("/config.json", defaultJson);
@@ -239,7 +264,7 @@ public:
         timeCfg.multiplier = 0.01f;
         timeCfg.positiveIsGood = false;
         timeCfg.decimals = 2;
-        timeCfg.limit = 0.5f;
+        timeCfg.limit = 0.3f;
         state.addMonitorConfig(timeCfg);
 
         MonitorConfig speedCfg;
@@ -255,13 +280,13 @@ public:
         speedCfg.limit = 1.0f;
         state.addMonitorConfig(speedCfg);
 
-        state.timeLimit = 0.5f;
+        state.timeLimit = 0.3f;
         state.speedLimit = 1.0f;
 
         // Default 3 screens: single lap_delta, single speed_delta, dual
-        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
-        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
-        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
+        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07FF, 0xFD20, 0x001F, 0x001F}, ScreenSlotConfig{}});
+        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07FF, 0xFD20, 0x001F, 0x001F}});
     }
 
     void loadConfig() {
@@ -323,18 +348,47 @@ public:
             for (JsonObject s : screens) {
                 const char* typeStr = s["type"] | "single";
                 if (strcmp(typeStr, "dual") == 0) {
-                    const char* topId = s["top"] | "";
-                    const char* btmId = s["bottom"] | "";
-                    int topIdx = state.findMonitorIndexById(topId);
-                    int btmIdx = state.findMonitorIndexById(btmId);
-                    if (topIdx >= 0 && btmIdx >= 0) {
-                        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, topIdx, btmIdx});
+                    ScreenSlotConfig topSlot;
+                    ScreenSlotConfig btmSlot;
+
+                    if (s["top"].is<JsonObject>()) {
+                        JsonObject topObj = s["top"];
+                        topSlot.monitorIndex = state.findMonitorIndexById(topObj["monitor"] | "");
+                        topSlot.positiveColor = ColorUtils::parseHexColor565(topObj["positive_color"] | "", 0xF800);
+                        topSlot.negativeColor = ColorUtils::parseHexColor565(topObj["negative_color"] | "", 0x07E0);
+                        topSlot.titleColor = ColorUtils::parseHexColor565(topObj["title_color"] | "", 0x001F);
+                        topSlot.valueColor = ColorUtils::parseHexColor565(topObj["value_color"] | "", 0x001F);
+                    } else {
+                        topSlot.monitorIndex = state.findMonitorIndexById(s["top"] | "");
+                        topSlot.positiveColor = ColorUtils::parseHexColor565(s["top_positive_color"] | "", 0xF800);
+                        topSlot.negativeColor = ColorUtils::parseHexColor565(s["top_negative_color"] | "", 0x07E0);
+                    }
+
+                    if (s["bottom"].is<JsonObject>()) {
+                        JsonObject btmObj = s["bottom"];
+                        btmSlot.monitorIndex = state.findMonitorIndexById(btmObj["monitor"] | "");
+                        btmSlot.positiveColor = ColorUtils::parseHexColor565(btmObj["positive_color"] | "", 0x07FF);
+                        btmSlot.negativeColor = ColorUtils::parseHexColor565(btmObj["negative_color"] | "", 0xFD20);
+                        btmSlot.titleColor = ColorUtils::parseHexColor565(btmObj["title_color"] | "", 0x001F);
+                        btmSlot.valueColor = ColorUtils::parseHexColor565(btmObj["value_color"] | "", 0x001F);
+                    } else {
+                        btmSlot.monitorIndex = state.findMonitorIndexById(s["bottom"] | "");
+                        btmSlot.positiveColor = ColorUtils::parseHexColor565(s["bottom_positive_color"] | "", 0x07FF);
+                        btmSlot.negativeColor = ColorUtils::parseHexColor565(s["bottom_negative_color"] | "", 0xFD20);
+                    }
+
+                    if (topSlot.monitorIndex >= 0 && btmSlot.monitorIndex >= 0) {
+                        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, topSlot, btmSlot});
                     }
                 } else { // "single"
                     const char* monId = s["monitor"] | "";
                     int monIdx = state.findMonitorIndexById(monId);
                     if (monIdx >= 0) {
-                        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, monIdx, -1});
+                        uint16_t posColor = ColorUtils::parseHexColor565(s["positive_color"] | "", 0xF800);
+                        uint16_t negColor = ColorUtils::parseHexColor565(s["negative_color"] | "", 0x07E0);
+                        uint16_t titleColor = ColorUtils::parseHexColor565(s["title_color"] | "", 0x001F);
+                        uint16_t valColor = ColorUtils::parseHexColor565(s["value_color"] | "", 0x001F);
+                        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{monIdx, posColor, negColor, titleColor, valColor}, ScreenSlotConfig{}});
                     }
                 }
             }
@@ -343,10 +397,10 @@ public:
         // Fallback: If screens is omitted or empty
         if (state.numScreenConfigs == 0) {
             for (int i = 0; i < state.numMonitorConfigs; ++i) {
-                state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, i, -1});
+                state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{i, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
             }
             if (state.numMonitorConfigs >= 2) {
-                state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+                state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07FF, 0xFD20, 0x001F, 0x001F}});
             }
         }
     }

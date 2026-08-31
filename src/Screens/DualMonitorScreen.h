@@ -7,15 +7,21 @@
 
 template <typename DisplayPolicy>
 class DualMonitorScreen : public IScreen<DisplayPolicy> {
-    int mTopIdx;
-    int mBtmIdx;
+    ScreenSlotConfig mTopSlot;
+    ScreenSlotConfig mBtmSlot;
 
 public:
-    DualMonitorScreen(int topIdx = 0, int btmIdx = 1) : mTopIdx(topIdx), mBtmIdx(btmIdx) {}
+    DualMonitorScreen(int topIdx = 0, int btmIdx = 1) : mTopSlot(topIdx), mBtmSlot(btmIdx) {}
+    DualMonitorScreen(const ScreenSlotConfig& top, const ScreenSlotConfig& btm) : mTopSlot(top), mBtmSlot(btm) {}
+
+    void setSlots(const ScreenSlotConfig& top, const ScreenSlotConfig& btm) {
+        mTopSlot = top;
+        mBtmSlot = btm;
+    }
 
     void setMonitors(int topIdx, int btmIdx) {
-        mTopIdx = topIdx;
-        mBtmIdx = btmIdx;
+        mTopSlot.monitorIndex = topIdx;
+        mBtmSlot.monitorIndex = btmIdx;
     }
 
     void onShow(DisplayPolicy& tft, AppState& state) override {
@@ -29,32 +35,23 @@ public:
         float barH = 0.23f; 
         
         // Draw Top Monitor
-        if (state.nextMonitorId > mTopIdx && mTopIdx >= 0) {
-            drawMonitor(ui, state, mTopIdx, 0.05f, 0.23f, barH);
+        if (mTopSlot.monitorIndex >= 0 && state.nextMonitorId > mTopSlot.monitorIndex) {
+            drawMonitor(ui, state, mTopSlot, 0.05f, 0.23f, barH);
         }
         
         // Draw Bottom Monitor
-        if (state.nextMonitorId > mBtmIdx && mBtmIdx >= 0) {
-            drawMonitor(ui, state, mBtmIdx, 0.52f, 0.70f, barH);
+        if (mBtmSlot.monitorIndex >= 0 && state.nextMonitorId > mBtmSlot.monitorIndex) {
+            drawMonitor(ui, state, mBtmSlot, 0.52f, 0.70f, barH);
         }
     }
 
 private:
-    void drawMonitor(UI<DisplayPolicy>& ui, AppState& state, int mIdx, float textY, float barY, float barH) {
+    void drawMonitor(UI<DisplayPolicy>& ui, AppState& state, const ScreenSlotConfig& slot, float textY, float barY, float barH) {
+        int mIdx = slot.monitorIndex;
         float* limitPtr = state.monitors[mIdx].limitPtr;
         float currentLimit = limitPtr ? *limitPtr : 1.0f;
         
         char prefix = (state.monitors[mIdx].title[0] != '\0') ? state.monitors[mIdx].title[0] : ' ';
-        uint32_t goodColor = 0x07E0; // GREEN
-        uint32_t badColor = 0xF800;  // RED
-
-        if (strcmp(state.monitors[mIdx].title, "TIME") == 0) {
-            goodColor = 0x07E0;
-            badColor = 0xF800;
-        } else if (strcmp(state.monitors[mIdx].title, "SPEED") == 0) {
-            goodColor = 0x07FF; // CYAN
-            badColor = 0xFD20;  // ORANGE
-        }
 
         if (state.monitors[mIdx].hasException) {
             char valBuf[32];
@@ -70,9 +67,9 @@ private:
             
             uint32_t color = 0x7BEF; // DARKGREY
             if (val > 0) {
-                color = state.monitors[mIdx].positiveIsGood ? goodColor : badColor;
+                color = slot.positiveColor;
             } else if (val < 0) {
-                color = state.monitors[mIdx].positiveIsGood ? badColor : goodColor;
+                color = slot.negativeColor;
             }
             
             char valBuf[32];

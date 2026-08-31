@@ -1,5 +1,6 @@
 #include <unity.h>
 #include "../../src/AppState.h"
+#include "../../src/ColorUtils.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -95,16 +96,42 @@ void test_appstate_screen_configs(void) {
     TEST_ASSERT_EQUAL(1, s.findMonitorIndexById("speed_delta"));
     TEST_ASSERT_EQUAL(-1, s.findMonitorIndexById("non_existent"));
 
-    ScreenConfig sc1{ScreenType::SINGLE, 0, -1};
-    ScreenConfig sc2{ScreenType::DUAL, 0, 1};
+    ScreenConfig sc1{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}};
+    ScreenConfig sc2{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07FF, 0xFD20, 0x001F, 0x001F}};
     s.addScreenConfig(sc1);
     s.addScreenConfig(sc2);
 
     TEST_ASSERT_EQUAL(2, s.numScreenConfigs);
     TEST_ASSERT_EQUAL(ScreenType::SINGLE, s.screenConfigs[0].type);
-    TEST_ASSERT_EQUAL(0, s.screenConfigs[0].primaryMonitorIndex);
+    TEST_ASSERT_EQUAL(0, s.screenConfigs[0].primary.monitorIndex);
+    TEST_ASSERT_EQUAL(0xF800, s.screenConfigs[0].primary.positiveColor);
+    TEST_ASSERT_EQUAL(0x07E0, s.screenConfigs[0].primary.negativeColor);
     TEST_ASSERT_EQUAL(ScreenType::DUAL, s.screenConfigs[1].type);
-    TEST_ASSERT_EQUAL(1, s.screenConfigs[1].secondaryMonitorIndex);
+    TEST_ASSERT_EQUAL(1, s.screenConfigs[1].secondary.monitorIndex);
+    TEST_ASSERT_EQUAL(0x07FF, s.screenConfigs[1].secondary.positiveColor);
+    TEST_ASSERT_EQUAL(0xFD20, s.screenConfigs[1].secondary.negativeColor);
+}
+
+void test_color_utils_hex_parsing(void) {
+    // Red #FF0000 -> 0xF800
+    TEST_ASSERT_EQUAL_HEX16(0xF800, ColorUtils::parseHexColor565("#FF0000", 0));
+    TEST_ASSERT_EQUAL_HEX16(0xF800, ColorUtils::parseHexColor565("FF0000", 0));
+    TEST_ASSERT_EQUAL_HEX16(0xF800, ColorUtils::parseHexColor565("0xFF0000", 0));
+    TEST_ASSERT_EQUAL_HEX16(0xF800, ColorUtils::parseHexColor565("0xF800", 0));
+
+    // Green #00FF00 -> 0x07E0
+    TEST_ASSERT_EQUAL_HEX16(0x07E0, ColorUtils::parseHexColor565("#00FF00", 0));
+
+    // Blue #0000FF -> 0x001F
+    TEST_ASSERT_EQUAL_HEX16(0x001F, ColorUtils::parseHexColor565("#0000FF", 0));
+
+    // Cyan #00FFFF -> 0x07FF
+    TEST_ASSERT_EQUAL_HEX16(0x07FF, ColorUtils::parseHexColor565("#00FFFF", 0));
+
+    // Fallbacks
+    TEST_ASSERT_EQUAL_HEX16(0x1234, ColorUtils::parseHexColor565("", 0x1234));
+    TEST_ASSERT_EQUAL_HEX16(0x1234, ColorUtils::parseHexColor565(nullptr, 0x1234));
+    TEST_ASSERT_EQUAL_HEX16(0x1234, ColorUtils::parseHexColor565("invalid", 0x1234));
 }
 
 #ifdef ARDUINO
@@ -117,6 +144,7 @@ void setup() {
     RUN_TEST(test_set_monitor_value);
     RUN_TEST(test_appstate_monitor_configs);
     RUN_TEST(test_appstate_screen_configs);
+    RUN_TEST(test_color_utils_hex_parsing);
     UNITY_END();
 }
 void loop() {}
@@ -129,6 +157,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_set_monitor_value);
     RUN_TEST(test_appstate_monitor_configs);
     RUN_TEST(test_appstate_screen_configs);
+    RUN_TEST(test_color_utils_hex_parsing);
     UNITY_END();
     return 0;
 }
