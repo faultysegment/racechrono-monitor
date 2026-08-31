@@ -7,7 +7,17 @@
 
 template <typename DisplayPolicy>
 class DualMonitorScreen : public IScreen<DisplayPolicy> {
+    int mTopIdx;
+    int mBtmIdx;
+
 public:
+    DualMonitorScreen(int topIdx = 0, int btmIdx = 1) : mTopIdx(topIdx), mBtmIdx(btmIdx) {}
+
+    void setMonitors(int topIdx, int btmIdx) {
+        mTopIdx = topIdx;
+        mBtmIdx = btmIdx;
+    }
+
     void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 
     }
@@ -18,14 +28,14 @@ public:
 
         float barH = 0.23f; 
         
-        // Draw Monitor 0 (Top)
-        if (state.nextMonitorId > 0) {
-            drawMonitor(ui, state, 0, 0.05f, 0.23f, barH);
+        // Draw Top Monitor
+        if (state.nextMonitorId > mTopIdx && mTopIdx >= 0) {
+            drawMonitor(ui, state, mTopIdx, 0.05f, 0.23f, barH);
         }
         
-        // Draw Monitor 1 (Bottom)
-        if (state.nextMonitorId > 1) {
-            drawMonitor(ui, state, 1, 0.52f, 0.70f, barH);
+        // Draw Bottom Monitor
+        if (state.nextMonitorId > mBtmIdx && mBtmIdx >= 0) {
+            drawMonitor(ui, state, mBtmIdx, 0.52f, 0.70f, barH);
         }
     }
 
@@ -34,18 +44,16 @@ private:
         float* limitPtr = state.monitors[mIdx].limitPtr;
         float currentLimit = limitPtr ? *limitPtr : 1.0f;
         
-        char prefix = ' ';
+        char prefix = (state.monitors[mIdx].title[0] != '\0') ? state.monitors[mIdx].title[0] : ' ';
         uint32_t goodColor = 0x07E0; // GREEN
         uint32_t badColor = 0xF800;  // RED
 
         if (strcmp(state.monitors[mIdx].title, "TIME") == 0) {
             goodColor = 0x07E0;
             badColor = 0xF800;
-            prefix = 'T';
         } else if (strcmp(state.monitors[mIdx].title, "SPEED") == 0) {
             goodColor = 0x07FF; // CYAN
             badColor = 0xFD20;  // ORANGE
-            prefix = 'S';
         }
 
         if (state.monitors[mIdx].hasException) {

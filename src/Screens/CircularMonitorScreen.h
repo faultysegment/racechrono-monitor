@@ -13,8 +13,12 @@ class CircularMonitorScreen : public IScreen<DisplayPolicy> {
     bool forceFullRedraw;
 
 public:
-    CircularMonitorScreen(int monitorIndex) 
+    CircularMonitorScreen(int monitorIndex = 0) 
         : mIdx(monitorIndex), lastVal(-9999.0f), lastColor(0), forceFullRedraw(true) {}
+
+    void setMonitorIndex(int idx) {
+        mIdx = idx;
+    }
 
     void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 

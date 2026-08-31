@@ -8,7 +8,11 @@ template <typename DisplayPolicy>
 class MonitorScreen : public IScreen<DisplayPolicy> {
     int mIdx;
 public:
-    MonitorScreen(int monitorIndex) : mIdx(monitorIndex) {}
+    MonitorScreen(int monitorIndex = 0) : mIdx(monitorIndex) {}
+
+    void setMonitorIndex(int idx) {
+        mIdx = idx;
+    }
 
     void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 
