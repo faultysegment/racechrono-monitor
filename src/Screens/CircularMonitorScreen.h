@@ -77,10 +77,7 @@ public:
                 float pct = (currentLimit > 0.0001f) ? (absVal / currentLimit) : 0.0f;
                 int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
 
-                // Adjust contrast when radial bar closes into the center
-                uint32_t titleColor = (rIn < ui.h(0.35f)) ? 0x0000 : 0x001F;
-
-                ui.textCenter(state.monitors[mIdx].title, titleColor, 0.1f, 0.25f);
+                ui.textCenter(state.monitors[mIdx].title, 0x001F, 0.1f, 0.25f);
                 ui.textCenter(valBuf, 0x001F, 0.25f, 0.5f);
             }
         } else {

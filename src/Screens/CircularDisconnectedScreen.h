@@ -23,9 +23,6 @@ public:
         
         // Subtitle (Crisp white, size 3)
         ui.textCenter("Waiting for BLE...", 0xFFFF, 0.10f, 0.50f);
-        
-        // Bottom hint (Dimmed gray, size 2)
-        ui.textCenter("Swipe to configure", 0x7BEF, 0.07f, 0.65f);
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {}
