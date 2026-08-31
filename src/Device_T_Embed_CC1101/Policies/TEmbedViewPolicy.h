@@ -7,12 +7,8 @@
 
 template <typename DisplayPolicy>
 class TEmbedViewPolicy {
-    MonitorScreen<DisplayPolicy> monitor0{0};
-    MonitorScreen<DisplayPolicy> monitor1{1};
-    MonitorScreen<DisplayPolicy> monitor2{2};
-    MonitorScreen<DisplayPolicy> monitor3{3};
-    DualMonitorScreen<DisplayPolicy> dualMonitor;
-
+    MonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
+    DualMonitorScreen<DisplayPolicy> dualScreens[MAX_SCREENS];
     DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
 
 public:
@@ -21,13 +17,16 @@ public:
     template <typename HWPolicy>
     void setupScreens(View<DisplayPolicy, HWPolicy>& appView, AppState& state) {
         appView.clearScreens();
-        int count = (state.numMonitorConfigs > 0) ? state.numMonitorConfigs : 2;
-        if (count >= 1) appView.addConnectedScreen(&monitor0);
-        if (count >= 2) appView.addConnectedScreen(&monitor1);
-        if (count >= 3) appView.addConnectedScreen(&monitor2);
-        if (count >= 4) appView.addConnectedScreen(&monitor3);
-        if (count >= 2) appView.addConnectedScreen(&dualMonitor);
-        
+        for (int i = 0; i < state.numScreenConfigs && i < MAX_SCREENS; ++i) {
+            const auto& sc = state.screenConfigs[i];
+            if (sc.type == ScreenType::SINGLE) {
+                singleScreens[i].setMonitorIndex(sc.primaryMonitorIndex);
+                appView.addConnectedScreen(&singleScreens[i]);
+            } else if (sc.type == ScreenType::DUAL) {
+                dualScreens[i].setMonitors(sc.primaryMonitorIndex, sc.secondaryMonitorIndex);
+                appView.addConnectedScreen(&dualScreens[i]);
+            }
+        }
         appView.addDisconnectedScreen(&disconnectedMsg);
     }
 };

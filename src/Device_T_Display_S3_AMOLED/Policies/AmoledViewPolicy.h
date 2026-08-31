@@ -6,11 +6,7 @@
 
 template <typename DisplayPolicy>
 class AmoledViewPolicy {
-    CircularMonitorScreen<DisplayPolicy> monitor0{0};
-    CircularMonitorScreen<DisplayPolicy> monitor1{1};
-    CircularMonitorScreen<DisplayPolicy> monitor2{2};
-    CircularMonitorScreen<DisplayPolicy> monitor3{3};
-
+    CircularMonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
     CircularDisconnectedScreen<DisplayPolicy> disconnectedMsg;
 
 public:
@@ -19,12 +15,11 @@ public:
     template <typename HWPolicy>
     void setupScreens(View<DisplayPolicy, HWPolicy>& appView, AppState& state) {
         appView.clearScreens();
-        int count = (state.numMonitorConfigs > 0) ? state.numMonitorConfigs : 2;
-        if (count >= 1) appView.addConnectedScreen(&monitor0);
-        if (count >= 2) appView.addConnectedScreen(&monitor1);
-        if (count >= 3) appView.addConnectedScreen(&monitor2);
-        if (count >= 4) appView.addConnectedScreen(&monitor3);
-        
+        for (int i = 0; i < state.numScreenConfigs && i < MAX_SCREENS; ++i) {
+            const auto& sc = state.screenConfigs[i];
+            singleScreens[i].setMonitorIndex(sc.primaryMonitorIndex);
+            appView.addConnectedScreen(&singleScreens[i]);
+        }
         appView.addDisconnectedScreen(&disconnectedMsg);
     }
 };

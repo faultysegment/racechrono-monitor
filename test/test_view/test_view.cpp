@@ -18,9 +18,13 @@ void setUp(void) {
     MockDisplayPolicy::reset();
     MockHWPolicy::reset();
 
-    if (view.getNumConnectedScreens() == 0) {
-        viewPolicy.setupScreens(view, state);
-    }
+    state.clearMonitorConfigs();
+    state.clearScreenConfigs();
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+
+    viewPolicy.setupScreens(view, state);
 }
 
 void tearDown(void) {}
@@ -47,8 +51,8 @@ void test_view_update_bars(void) {
     state.setMonitorValue(0, 5); // 5 / 10 = 50%
     state.setMonitorValue(1, 2); // 2 / 5 = 40%
     
-    // Test rectangular monitor0 (Time)
-    state.currentScreenIndex = 2;
+    // Test rectangular monitor0 (Time) - index 1 (circ0 is index 0)
+    state.currentScreenIndex = 1;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
     TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
@@ -61,7 +65,7 @@ void test_view_update_bars(void) {
         TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[1].w);
     }
 
-    // Test rectangular monitor1 (Speed)
+    // Test rectangular monitor1 (Speed) - index 3 (circ1 is index 2)
     state.currentScreenIndex = 3;
     MockDisplayPolicy::reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
@@ -101,7 +105,11 @@ void test_view_global_hud_mode(void) {
 
 void test_screen_registration(void) {
     state.reset();
-    state.numMonitorConfigs = 2;
+    state.clearScreenConfigs();
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
@@ -112,12 +120,28 @@ void test_screen_registration(void) {
 
 void test_screen_registration_single_monitor(void) {
     state.reset();
-    state.numMonitorConfigs = 1;
+    state.clearScreenConfigs();
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
+
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
     NativeViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
     TEST_ASSERT_EQUAL(2, mockView.getNumConnectedScreens()); // circ0 + rect0
+    TEST_ASSERT_EQUAL(1, mockView.getNumDisconnectedScreens());
+}
+
+void test_view_custom_screen_composition(void) {
+    state.reset();
+    state.clearScreenConfigs();
+    state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 1, 0}); // top: SPEED (idx 1), btm: TIME (idx 0)
+    state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1}); // single: SPEED (idx 1)
+
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    policy.setupScreens(mockView, state);
+
+    TEST_ASSERT_EQUAL(3, mockView.getNumConnectedScreens()); // dual + circ1 + rect1
     TEST_ASSERT_EQUAL(1, mockView.getNumDisconnectedScreens());
 }
 
@@ -180,6 +204,7 @@ void setup() {
     RUN_TEST(test_view_global_hud_mode);
     RUN_TEST(test_screen_registration);
     RUN_TEST(test_screen_registration_single_monitor);
+    RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
@@ -195,6 +220,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_global_hud_mode);
     RUN_TEST(test_screen_registration);
     RUN_TEST(test_screen_registration_single_monitor);
+    RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
     UNITY_END();
