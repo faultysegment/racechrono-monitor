@@ -2,6 +2,7 @@
 
 #include "AppState.h"
 #include "EventBus.h"
+#include <ArduinoJson.h>
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -27,18 +28,18 @@ class AppLogic {
     BLEPolicy ble;
 
     bool wasConnected;
+    bool wasIndicating;
 
 public:
     AppLogic(AppState& s, EventBus& b) : 
-        state(s), bus(b), wasConnected(true) {
+        state(s), bus(b), wasConnected(true), wasIndicating(false) {
     }
     
     void setup() {
         HWPolicy::initBoard();
 
         StoragePolicy::init();
-        state.speedLimit = StoragePolicy::getFloat("limit_speed", 5.0f);
-        state.timeLimit = StoragePolicy::getFloat("limit_time", 0.1f);
+        loadConfig();
         restoreDisconnectedScreen();
         restoreConnectedScreen();
 
@@ -106,9 +107,16 @@ public:
             lastBatteryUpdate = HWPolicy::millis();
         }
         
+        bool isIndicating = isConnected && ble.isConfigIndicating();
+        if (!wasIndicating && isIndicating) {
+            // Re-subscription to indications (e.g. session restart or continuation)
+            state.isConfigured = false;
+        }
+        wasIndicating = isIndicating;
+
         // Configuration state machine tick
         if (isConnected && !state.isConfiguring && !state.isConfigured) {
-            if (ble.isConfigIndicating()) {
+            if (isIndicating) {
                 bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
             }
         }
@@ -123,17 +131,12 @@ public:
                 break;
 
             case EventType::HW_ACTION_TOGGLE:
-                toggleEditMode();
+                // No-op: editing on device is disabled
                 break;
 
-            case EventType::HW_NAV_DELTA: {
-                if (state.isEditMode) {
-                    changeValue(e.arg1);
-                } else {
-                    changePage(e.arg1);
-                }
+            case EventType::HW_NAV_DELTA:
+                changePage(e.arg1);
                 break;
-            }
 
             case EventType::BLE_CONNECTED:
                 state.isConnected = true;
@@ -172,8 +175,10 @@ public:
                     if (configureMonitors()) {
                         bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
                         state.isConfigured = true;
+                        state.isConfiguring = false;
                         bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                     } else {
+                        state.isConfiguring = false;
                         bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
                     }
                 } else {
@@ -187,37 +192,126 @@ public:
         }
     }
 
+    void saveDefaultConfig() {
+        const char* defaultJson = "{\n"
+            "  \"isHud\": false,\n"
+            "  \"monitors\": [\n"
+            "    {\n"
+            "      \"name\": \"Delta curr lap time\",\n"
+            "      \"title\": \"TIME\",\n"
+            "      \"formula\": \"channel(device(lap), delta_lap_time)*100.0\",\n"
+            "      \"multiplier\": 0.01,\n"
+            "      \"positive_is_good\": false,\n"
+            "      \"decimals\": 2,\n"
+            "      \"limit\": 0.1\n"
+            "    },\n"
+            "    {\n"
+            "      \"name\": \"Delta speed\",\n"
+            "      \"title\": \"SPEED\",\n"
+            "      \"formula\": \"channel(device(calc), delta_speed)*100\",\n"
+            "      \"multiplier\": 0.036,\n"
+            "      \"positive_is_good\": true,\n"
+            "      \"decimals\": 1,\n"
+            "      \"limit\": 5.0\n"
+            "    }\n"
+            "  ]\n"
+            "}\n";
+        StoragePolicy::writeConfigFile("/config.json", defaultJson);
+    }
+
+    void loadDefaultConfig() {
+        state.isHud = false;
+        state.clearMonitorConfigs();
+
+        MonitorConfig timeCfg;
+        strncpy(timeCfg.name, "Delta curr lap time", sizeof(timeCfg.name));
+        strncpy(timeCfg.title, "TIME", sizeof(timeCfg.title));
+        strncpy(timeCfg.formula, "channel(device(lap), delta_lap_time)*100.0", sizeof(timeCfg.formula));
+        timeCfg.multiplier = 0.01f;
+        timeCfg.positiveIsGood = false;
+        timeCfg.decimals = 2;
+        timeCfg.limit = 0.1f;
+        state.addMonitorConfig(timeCfg);
+
+        MonitorConfig speedCfg;
+        strncpy(speedCfg.name, "Delta speed", sizeof(speedCfg.name));
+        strncpy(speedCfg.title, "SPEED", sizeof(speedCfg.title));
+        strncpy(speedCfg.formula, "channel(device(calc), delta_speed)*100", sizeof(speedCfg.formula));
+        speedCfg.multiplier = 0.036f;
+        speedCfg.positiveIsGood = true;
+        speedCfg.decimals = 1;
+        speedCfg.limit = 5.0f;
+        state.addMonitorConfig(speedCfg);
+
+        state.timeLimit = 0.1f;
+        state.speedLimit = 5.0f;
+    }
+
+    void loadConfig() {
+        std::string jsonStr = StoragePolicy::readConfigFile("/config.json");
+        if (jsonStr.empty()) {
+            if (StoragePolicy::isCardPresent()) {
+                saveDefaultConfig();
+            }
+            loadDefaultConfig();
+            return;
+        }
+
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, jsonStr);
+        if (err || !doc.is<JsonObject>()) {
+            loadDefaultConfig();
+            return;
+        }
+
+        state.isHud = doc["isHud"] | false;
+        state.clearMonitorConfigs();
+
+        JsonArray monitors = doc["monitors"];
+        if (monitors.isNull() || monitors.size() == 0) {
+            loadDefaultConfig();
+            return;
+        }
+
+        for (JsonObject m : monitors) {
+            MonitorConfig cfg;
+            const char* name = m["name"] | "";
+            const char* title = m["title"] | "";
+            const char* formula = m["formula"] | "";
+            strncpy(cfg.name, name, sizeof(cfg.name));
+            cfg.name[sizeof(cfg.name) - 1] = '\0';
+            strncpy(cfg.title, title, sizeof(cfg.title));
+            cfg.title[sizeof(cfg.title) - 1] = '\0';
+            strncpy(cfg.formula, formula, sizeof(cfg.formula));
+            cfg.formula[sizeof(cfg.formula) - 1] = '\0';
+            cfg.multiplier = m["multiplier"] | 1.0f;
+            cfg.positiveIsGood = m["positive_is_good"] | false;
+            cfg.decimals = m["decimals"] | 1;
+            cfg.limit = m["limit"] | 0.1f;
+            state.addMonitorConfig(cfg);
+        }
+
+        if (state.numMonitorConfigs == 0) {
+            loadDefaultConfig();
+        } else {
+            if (state.numMonitorConfigs >= 1) state.timeLimit = state.monitorConfigs[0].limit;
+            if (state.numMonitorConfigs >= 2) state.speedLimit = state.monitorConfigs[1].limit;
+        }
+    }
+
 private:
     void restoreConnectedScreen() {
         int baseScreen = StoragePolicy::getInt("last_screen", 0);
-        int hudMode = StoragePolicy::getInt("hud_mode", 0);
         int numConnected = state.numConnectedScreens;
-        if (numConnected >= 2) {
-            int m = numConnected / 2;
-            baseScreen = (baseScreen % m + m) % m;
-            state.currentScreenIndex = (hudMode != 0) ? (baseScreen + m) : baseScreen;
+        if (numConnected > 0) {
+            state.currentScreenIndex = (baseScreen % numConnected + numConnected) % numConnected;
         } else {
-            state.currentScreenIndex = baseScreen;
+            state.currentScreenIndex = 0;
         }
     }
 
     void restoreDisconnectedScreen() {
-        int hudMode = StoragePolicy::getInt("hud_mode", 0);
-        int numDisc = state.numDisconnectedScreens;
-        if (hudMode != 0 && numDisc >= 2) {
-            state.disconnectedScreenIndex = numDisc / 2;
-        } else {
-            state.disconnectedScreenIndex = 0;
-        }
-    }
-
-    void toggleEditMode() {
-        state.isEditMode = !state.isEditMode;
-        if (!state.isEditMode) {
-            StoragePolicy::putFloat("limit_speed", state.speedLimit);
-            StoragePolicy::putFloat("limit_time", state.timeLimit);
-        }
-        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+        state.disconnectedScreenIndex = 0;
     }
 
     void changePage(int navDelta) {
@@ -229,15 +323,7 @@ private:
                     newIndex += numConnected;
                 }
                 state.currentScreenIndex = newIndex;
-                if (numConnected >= 2) {
-                    int m = numConnected / 2;
-                    int baseScreen = state.currentScreenIndex % m;
-                    bool isHud = (state.currentScreenIndex >= m);
-                    StoragePolicy::putInt("last_screen", baseScreen);
-                    StoragePolicy::putInt("hud_mode", isHud ? 1 : 0);
-                } else {
-                    StoragePolicy::putInt("last_screen", state.currentScreenIndex);
-                }
+                StoragePolicy::putInt("last_screen", state.currentScreenIndex);
             }
         } else {
             int numDisconnected = state.numDisconnectedScreens;
@@ -247,43 +333,6 @@ private:
                     newIndex += numDisconnected;
                 }
                 state.disconnectedScreenIndex = newIndex;
-                if (numDisconnected >= 2) {
-                    int mDisc = numDisconnected / 2;
-                    bool isHud = (state.disconnectedScreenIndex >= mDisc);
-                    StoragePolicy::putInt("hud_mode", isHud ? 1 : 0);
-                }
-            }
-        }
-        bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
-    }
-
-    void changeValue(int navDelta) {
-        float change = (navDelta > 0) ? 0.1f : -0.1f;
-        if (state.isConnected) {
-            int numConnected = state.numConnectedScreens;
-            int baseIdx = state.currentScreenIndex;
-            if (numConnected >= 2) {
-                baseIdx = baseIdx % (numConnected / 2);
-            }
-            if (baseIdx < state.nextMonitorId) {
-                float* limitPtr = state.monitors[baseIdx].limitPtr;
-                if (limitPtr) {
-                    *limitPtr += change;
-                    if (*limitPtr < 0.1f) *limitPtr = 0.1f;
-                }
-            }
-        } else {
-            int numDisc = state.numDisconnectedScreens;
-            int baseDisc = state.disconnectedScreenIndex;
-            if (numDisc >= 2) {
-                baseDisc = baseDisc % (numDisc / 2);
-            }
-            if (baseDisc == 1) { // Speed Config
-                state.speedLimit += change;
-                if (state.speedLimit < 0.1f) state.speedLimit = 0.1f;
-            } else if (baseDisc == 2) { // Time Config
-                state.timeLimit += change;
-                if (state.timeLimit < 0.1f) state.timeLimit = 0.1f;
             }
         }
         bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
@@ -292,9 +341,24 @@ private:
     void handleConfigData(const std::string& rxData) {
         const uint8_t* data = (const uint8_t*)rxData.data();
         if (rxData.length() >= 1) {
-            int result = data[0];
+            int cmdOrResult = data[0];
             int monitorId = rxData.length() >= 2 ? data[1] : 0;
-            switch (result) {
+            switch (cmdOrResult) {
+                case CMD_TYPE_REMOVE_ALL:
+                    // If 1 byte payload: CMD_TYPE_REMOVE_ALL command from RaceChrono
+                    if (rxData.length() == 1) {
+                        state.isConfigured = false;
+                        state.isConfiguring = false;
+                        bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
+                    }
+                    break;
+                case CMD_TYPE_UPDATE_ALL:
+                case CMD_TYPE_UPDATE:
+                    // Reconfigure request from RaceChrono (session start / continue)
+                    state.isConfigured = false;
+                    state.isConfiguring = false;
+                    bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
+                    break;
                 case CMD_RESULT_EQUATION_EXCEPTION:
                     state.setMonitorException(monitorId, true);
                     bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
@@ -380,9 +444,16 @@ private:
 
     bool configureMonitors() {
         state.resetMonitors();
-        if (!addMonitorConfig("Delta curr lap time", "channel(device(lap), delta_lap_time)*100.0", 0.01, "TIME", false, 2, &state.timeLimit) ||
-            !addMonitorConfig("Delta speed", "channel(device(calc), delta_speed)*100", 0.036, "SPEED", true, 1, &state.speedLimit)) {
-            return false;
+        for (int i = 0; i < state.numMonitorConfigs; i++) {
+            if (!addMonitorConfig(state.monitorConfigs[i].name,
+                                  state.monitorConfigs[i].formula,
+                                  state.monitorConfigs[i].multiplier,
+                                  state.monitorConfigs[i].title,
+                                  state.monitorConfigs[i].positiveIsGood,
+                                  state.monitorConfigs[i].decimals,
+                                  &state.monitorConfigs[i].limit)) {
+                return false;
+            }
         }
         return true;    
     }

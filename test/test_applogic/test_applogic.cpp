@@ -93,125 +93,129 @@ void test_applogic_navigation_scroll(void) {
     TEST_ASSERT_EQUAL(state.numConnectedScreens - 1, state.currentScreenIndex);
 }
 
-void test_applogic_edit_mode(void) {
-    logic.setup();
-    MockBLEPolicy::simulateConnect();
-    state.isConfigured = true;
-    state.isConnected = true;
-    state.currentScreenIndex = 0;
-    state.timeLimit = 0.1f;
-    state.addMonitor("M", 1.0f, "TIME", false, 2, &state.timeLimit);
-    state.isEditMode = false;
-
-    MockHWPolicy::actionKeyPressed = true;
-    MockHWPolicy::currentMillis = 1000;
-    logic.pollInput();
-    flushEvents();
-    
-    MockHWPolicy::actionKeyPressed = false;
-    MockHWPolicy::currentMillis = 1200;
-    logic.pollInput();
-    flushEvents();
-    
-    TEST_ASSERT_TRUE(state.isEditMode);
-
-    MockHWPolicy::navigationDelta = 1;
-    logic.pollInput();
-    flushEvents();
-    
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.2f, state.timeLimit);
-    
-    MockHWPolicy::navigationDelta = -1;
-    logic.pollInput();
-    flushEvents();
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.1f, state.timeLimit);
-
-    MockHWPolicy::actionKeyPressed = true;
-    MockHWPolicy::currentMillis = 2000;
-    logic.pollInput();
-    flushEvents();
-    
-    MockHWPolicy::actionKeyPressed = false;
-    MockHWPolicy::currentMillis = 2200;
-    logic.pollInput();
-    flushEvents();
-    
-    TEST_ASSERT_FALSE(state.isEditMode);
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.1f, MockStoragePolicy::store["limit_time"]);
-}
-
 void test_applogic_screen_persistence() {
     setUp();
     MockStoragePolicy::reset();
     logic.setup();
 
-    // Start with 6 connected screens (3 base, 3 HUD) and 6 disconnected screens (3 base, 3 HUD)
-    state.numConnectedScreens = 6;
-    state.numDisconnectedScreens = 6;
+    state.numConnectedScreens = 3;
+    state.numDisconnectedScreens = 1;
     
     // Simulate BLE Connected
     testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_TRUE(state.isConnected);
-    state.numConnectedScreens = 6;
-    state.numDisconnectedScreens = 6;
 
-    // Scroll to screen 4 (Base screen 1 in HUD mode: 1 + 3 = 4)
+    // Scroll to screen 1
     MockHWPolicy::navigationDelta = 1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
-
-    MockHWPolicy::navigationDelta = 3;
-    logic.pollInput();
-    flushEvents();
-    TEST_ASSERT_EQUAL(4, state.currentScreenIndex);
-    
-    // Base screen 1 (4 % 3) and HUD mode 1 should be stored separately
     TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["last_screen"]);
-    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["hud_mode"]);
 
-    // Disconnect -> should switch to HUD Disconnected screen (index 3: 6 / 2 = 3)
+    // Disconnect -> should switch to Disconnected screen
     testBus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_FALSE(state.isConnected);
-    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
+    TEST_ASSERT_EQUAL(0, state.disconnectedScreenIndex);
 
-    // Reconnect -> should restore base screen 1 in HUD mode (1 + 3 = 4)
+    // Reconnect -> should restore screen 1
     testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
     TEST_ASSERT_TRUE(state.isConnected);
-    TEST_ASSERT_EQUAL(4, state.currentScreenIndex);
+    TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
 }
 
-void test_applogic_disconnected_hud_persistence() {
+void test_applogic_json_config_custom_monitors(void) {
     setUp();
     MockStoragePolicy::reset();
+    MockStoragePolicy::configFileContent = "{\n"
+        "  \"isHud\": true,\n"
+        "  \"monitors\": [\n"
+        "    {\n"
+        "      \"name\": \"Custom Delta\",\n"
+        "      \"title\": \"CDELTA\",\n"
+        "      \"formula\": \"channel(device(lap), delta_lap_time)*100.0\",\n"
+        "      \"multiplier\": 0.01,\n"
+        "      \"positive_is_good\": false,\n"
+        "      \"decimals\": 2,\n"
+        "      \"limit\": 0.25\n"
+        "    }\n"
+        "  ]\n"
+        "}";
+
     logic.setup();
-    state.numConnectedScreens = 6;
-    state.numDisconnectedScreens = 6;
+    TEST_ASSERT_TRUE(state.isHud);
+    TEST_ASSERT_EQUAL(1, state.numMonitorConfigs);
+    TEST_ASSERT_EQUAL_STRING("CDELTA", state.monitorConfigs[0].title);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, state.monitorConfigs[0].limit);
+}
 
-    // 1. In disconnected state, scroll to HUD config screen (index 3)
-    state.isConnected = false;
-    MockHWPolicy::navigationDelta = 3;
-    logic.pollInput();
-    flushEvents();
-    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
-    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["hud_mode"]);
+void test_applogic_json_config_fallback_defaults(void) {
+    setUp();
+    MockStoragePolicy::reset();
+    MockStoragePolicy::configFileContent = ""; // Empty file / missing
 
-    // 2. Simulate bootup / setup with hud_mode = 1
-    state.disconnectedScreenIndex = 0;
-    state.numDisconnectedScreens = 6;
-    state.numConnectedScreens = 6;
     logic.setup();
-    TEST_ASSERT_EQUAL(3, state.disconnectedScreenIndex);
+    TEST_ASSERT_FALSE(state.isHud);
+    TEST_ASSERT_EQUAL(2, state.numMonitorConfigs);
+    TEST_ASSERT_EQUAL_STRING("TIME", state.monitorConfigs[0].title);
+    TEST_ASSERT_EQUAL_STRING("SPEED", state.monitorConfigs[1].title);
+}
 
-    // 3. Connect BLE -> connects directly to HUD mode for last_screen
-    MockStoragePolicy::storeInt["last_screen"] = 2; // Dual monitor
-    testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
+void test_applogic_json_config_auto_create(void) {
+    setUp();
+    MockStoragePolicy::reset();
+    MockStoragePolicy::cardPresent = true;
+    MockStoragePolicy::configFileContent = "";
+
+    logic.setup();
+    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"monitors\"") != std::string::npos);
+    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"TIME\"") != std::string::npos);
+}
+
+void test_applogic_reconfigure_on_cmd_type_update_all(void) {
+    logic.setup();
+    MockBLEPolicy::simulateConnect();
+    MockBLEPolicy::indicating = true;
+    logic.pollLogic();
     flushEvents();
-    TEST_ASSERT_TRUE(state.isConnected);
-    TEST_ASSERT_EQUAL(5, state.currentScreenIndex); // 2 + 3 = 5 (HUD Dual Monitor)
+
+    TEST_ASSERT_TRUE(state.isConfigured);
+    size_t initialCount = MockBLEPolicy::sentConfigCommands.size();
+    TEST_ASSERT_TRUE(initialCount > 0);
+
+    // Simulate RaceChrono sending CMD_TYPE_UPDATE_ALL (4) upon session continue
+    uint8_t cmd[1] = {4};
+    MockBLEPolicy::simulateConfigWrite(std::string((char*)cmd, 1));
+    flushEvents();
+
+    TEST_ASSERT_TRUE(state.isConfigured);
+    TEST_ASSERT_TRUE(MockBLEPolicy::sentConfigCommands.size() > initialCount);
+}
+
+void test_applogic_reconfigure_on_indication_toggle(void) {
+    logic.setup();
+    MockBLEPolicy::simulateConnect();
+    MockBLEPolicy::indicating = true;
+    logic.pollLogic();
+    flushEvents();
+
+    TEST_ASSERT_TRUE(state.isConfigured);
+    size_t initialCount = MockBLEPolicy::sentConfigCommands.size();
+
+    // RaceChrono drops indication on session pause/stop
+    MockBLEPolicy::indicating = false;
+    logic.pollLogic();
+    flushEvents();
+
+    // RaceChrono re-enables indication on session resume
+    MockBLEPolicy::indicating = true;
+    logic.pollLogic();
+    flushEvents();
+
+    TEST_ASSERT_TRUE(state.isConfigured);
+    TEST_ASSERT_TRUE(MockBLEPolicy::sentConfigCommands.size() > initialCount);
 }
 
 #ifdef ARDUINO
@@ -221,9 +225,12 @@ void setup() {
     RUN_TEST(test_applogic_ble_connect);
     RUN_TEST(test_applogic_button_power_off);
     RUN_TEST(test_applogic_navigation_scroll);
-    RUN_TEST(test_applogic_edit_mode);
     RUN_TEST(test_applogic_screen_persistence);
-    RUN_TEST(test_applogic_disconnected_hud_persistence);
+    RUN_TEST(test_applogic_json_config_custom_monitors);
+    RUN_TEST(test_applogic_json_config_fallback_defaults);
+    RUN_TEST(test_applogic_json_config_auto_create);
+    RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
+    RUN_TEST(test_applogic_reconfigure_on_indication_toggle);
     UNITY_END();
 }
 void loop() {}
@@ -233,9 +240,12 @@ int main(int argc, char **argv) {
     RUN_TEST(test_applogic_ble_connect);
     RUN_TEST(test_applogic_button_power_off);
     RUN_TEST(test_applogic_navigation_scroll);
-    RUN_TEST(test_applogic_edit_mode);
     RUN_TEST(test_applogic_screen_persistence);
-    RUN_TEST(test_applogic_disconnected_hud_persistence);
+    RUN_TEST(test_applogic_json_config_custom_monitors);
+    RUN_TEST(test_applogic_json_config_fallback_defaults);
+    RUN_TEST(test_applogic_json_config_auto_create);
+    RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
+    RUN_TEST(test_applogic_reconfigure_on_indication_toggle);
     UNITY_END();
     return 0;
 }
