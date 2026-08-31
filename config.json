@@ -1,0 +1,23 @@
+{
+  "isHud": false,
+  "monitors": [
+    {
+      "name": "Delta curr lap time",
+      "title": "TIME",
+      "formula": "channel(device(lap), delta_lap_time)*100.0",
+      "multiplier": 0.01,
+      "positive_is_good": false,
+      "decimals": 2,
+      "limit": 0.1
+    },
+    {
+      "name": "Delta speed",
+      "title": "SPEED",
+      "formula": "channel(device(calc), delta_speed)*100",
+      "multiplier": 0.036,
+      "positive_is_good": true,
+      "decimals": 1,
+      "limit": 5.0
+    }
+  ]
+}
