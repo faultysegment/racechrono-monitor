@@ -9,6 +9,7 @@
 # AI Agent & Tools
 .gemini/
 .agents/
+.superpowers/
 docs/
 
 # Build artifacts
