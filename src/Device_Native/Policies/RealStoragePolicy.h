@@ -1,12 +1,36 @@
 #pragma once
 #include <string>
 #include <map>
+#include <fstream>
+#include <sstream>
 
 class RealStoragePolicy {
     static std::map<std::string, float> data;
     static std::map<std::string, int> dataInt;
 public:
     static void init() {}
+
+    static bool isCardPresent() {
+        return true;
+    }
+
+    static std::string readConfigFile(const char* filename = "config.json") {
+        const char* path = (filename && filename[0] == '/') ? filename + 1 : filename;
+        std::ifstream file(path);
+        if (!file.is_open()) return "";
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+
+    static bool writeConfigFile(const char* filename, const char* content) {
+        const char* path = (filename && filename[0] == '/') ? filename + 1 : filename;
+        std::ofstream file(path);
+        if (!file.is_open()) return false;
+        file << (content ? content : "");
+        return true;
+    }
+
     static void putFloat(const char* key, float val) {
         data[key] = val;
     }

@@ -1,9 +1,55 @@
 #pragma once
 #include <Preferences.h>
+#include <SD.h>
+#include <SPI.h>
+#include <FS.h>
+#include <string>
 
 class AmoledStoragePolicy {
 public:
-    static void init() {}
+    static bool initSD() {
+        static bool initialized = false;
+        static bool mounted = false;
+        if (!initialized) {
+            initialized = true;
+            SPI.begin(41, 40, 39, 38);
+            mounted = SD.begin(38, SPI);
+        }
+        return mounted;
+    }
+
+    static void init() {
+        initSD();
+    }
+
+    static bool isCardPresent() {
+        if (!initSD()) return false;
+        return (SD.cardType() != CARD_NONE);
+    }
+
+    static std::string readConfigFile(const char* filename = "/config.json") {
+        if (!isCardPresent()) return "";
+        File file = SD.open(filename, FILE_READ);
+        if (!file) return "";
+        std::string content;
+        content.reserve(file.size());
+        while (file.available()) {
+            content.push_back((char)file.read());
+        }
+        file.close();
+        return content;
+    }
+
+    static bool writeConfigFile(const char* filename, const char* content) {
+        if (!isCardPresent()) return false;
+        File file = SD.open(filename, FILE_WRITE);
+        if (!file) return false;
+        if (content) {
+            file.print(content);
+        }
+        file.close();
+        return true;
+    }
     
     static float getFloat(const char* key, float defaultValue) {
         Preferences prefs;
