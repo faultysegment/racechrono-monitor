@@ -3,11 +3,13 @@
 #include <cstdint>
 #include <cstring>
 
-#define MAX_MONITORS 10
+#define MAX_MONITORS 8
+#define MAX_SCREENS 8
+#define MONITOR_ID_MAX_LEN 16
 #define MONITOR_NAME_MAX 31
 
 struct MonitorConfig {
-    char name[MONITOR_NAME_MAX + 1];
+    char id[MONITOR_ID_MAX_LEN + 1];
     char title[16];
     char formula[128];
     float multiplier;
@@ -16,12 +18,23 @@ struct MonitorConfig {
     float limit;
 };
 
+enum class ScreenType {
+    SINGLE,
+    DUAL
+};
+
+struct ScreenConfig {
+    ScreenType type;
+    int primaryMonitorIndex;   // Index into state.monitors (0 .. MAX_MONITORS - 1)
+    int secondaryMonitorIndex; // For DUAL screens (-1 if unused)
+};
+
 class AppState {
 public:
     static const int32_t INVALID_VALUE = 2147483647;
 
     struct Monitor {
-        char name[MONITOR_NAME_MAX + 1];
+        char name[32];
         char title[16];
         float multiplier;
         int32_t value;
@@ -37,6 +50,10 @@ public:
 
     MonitorConfig monitorConfigs[MAX_MONITORS];
     int numMonitorConfigs;
+
+    ScreenConfig screenConfigs[MAX_SCREENS];
+    int numScreenConfigs;
+
     bool isHud;
 
     bool isConnected;
@@ -59,6 +76,7 @@ public:
         disconnectedScreenIndex = 0;
         isHud = false;
         numMonitorConfigs = 0;
+        numScreenConfigs = 0;
         batteryPercent = -1;
         numConnectedScreens = 0;
         numDisconnectedScreens = 0;
@@ -84,6 +102,28 @@ public:
             return true;
         }
         return false;
+    }
+
+    void clearScreenConfigs() {
+        numScreenConfigs = 0;
+    }
+
+    bool addScreenConfig(const ScreenConfig& cfg) {
+        if (numScreenConfigs < MAX_SCREENS) {
+            screenConfigs[numScreenConfigs++] = cfg;
+            return true;
+        }
+        return false;
+    }
+
+    int findMonitorIndexById(const char* id) const {
+        if (!id) return -1;
+        for (int i = 0; i < numMonitorConfigs; ++i) {
+            if (strncmp(monitorConfigs[i].id, id, MONITOR_ID_MAX_LEN) == 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     void resetMonitors() {

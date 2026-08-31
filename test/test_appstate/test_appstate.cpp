@@ -60,7 +60,7 @@ void test_appstate_monitor_configs(void) {
     TEST_ASSERT_TRUE(s.isHud);
 
     MonitorConfig cfg;
-    strncpy(cfg.name, "Delta time", sizeof(cfg.name));
+    strncpy(cfg.id, "lap_delta", sizeof(cfg.id));
     strncpy(cfg.title, "TIME", sizeof(cfg.title));
     strncpy(cfg.formula, "channel(device(lap), delta_lap_time)*100.0", sizeof(cfg.formula));
     cfg.multiplier = 0.01f;
@@ -70,8 +70,41 @@ void test_appstate_monitor_configs(void) {
 
     s.addMonitorConfig(cfg);
     TEST_ASSERT_EQUAL(1, s.numMonitorConfigs);
+    TEST_ASSERT_EQUAL_STRING("lap_delta", s.monitorConfigs[0].id);
     TEST_ASSERT_EQUAL_STRING("TIME", s.monitorConfigs[0].title);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.1f, s.monitorConfigs[0].limit);
+}
+
+void test_appstate_screen_configs(void) {
+    AppState s;
+    s.reset();
+    TEST_ASSERT_EQUAL(0, s.numMonitorConfigs);
+    TEST_ASSERT_EQUAL(0, s.numScreenConfigs);
+
+    MonitorConfig m1;
+    strncpy(m1.id, "lap_delta", sizeof(m1.id));
+    strncpy(m1.title, "TIME", sizeof(m1.title));
+    s.addMonitorConfig(m1);
+
+    MonitorConfig m2;
+    strncpy(m2.id, "speed_delta", sizeof(m2.id));
+    strncpy(m2.title, "SPEED", sizeof(m2.title));
+    s.addMonitorConfig(m2);
+
+    TEST_ASSERT_EQUAL(0, s.findMonitorIndexById("lap_delta"));
+    TEST_ASSERT_EQUAL(1, s.findMonitorIndexById("speed_delta"));
+    TEST_ASSERT_EQUAL(-1, s.findMonitorIndexById("non_existent"));
+
+    ScreenConfig sc1{ScreenType::SINGLE, 0, -1};
+    ScreenConfig sc2{ScreenType::DUAL, 0, 1};
+    s.addScreenConfig(sc1);
+    s.addScreenConfig(sc2);
+
+    TEST_ASSERT_EQUAL(2, s.numScreenConfigs);
+    TEST_ASSERT_EQUAL(ScreenType::SINGLE, s.screenConfigs[0].type);
+    TEST_ASSERT_EQUAL(0, s.screenConfigs[0].primaryMonitorIndex);
+    TEST_ASSERT_EQUAL(ScreenType::DUAL, s.screenConfigs[1].type);
+    TEST_ASSERT_EQUAL(1, s.screenConfigs[1].secondaryMonitorIndex);
 }
 
 #ifdef ARDUINO
@@ -83,6 +116,7 @@ void setup() {
     RUN_TEST(test_add_max_monitors);
     RUN_TEST(test_set_monitor_value);
     RUN_TEST(test_appstate_monitor_configs);
+    RUN_TEST(test_appstate_screen_configs);
     UNITY_END();
 }
 void loop() {}
@@ -94,6 +128,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_add_max_monitors);
     RUN_TEST(test_set_monitor_value);
     RUN_TEST(test_appstate_monitor_configs);
+    RUN_TEST(test_appstate_screen_configs);
     UNITY_END();
     return 0;
 }
