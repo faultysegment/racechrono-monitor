@@ -197,23 +197,28 @@ public:
             "  \"isHud\": false,\n"
             "  \"monitors\": [\n"
             "    {\n"
-            "      \"name\": \"Delta curr lap time\",\n"
+            "      \"id\": \"lap_delta\",\n"
             "      \"title\": \"TIME\",\n"
             "      \"formula\": \"channel(device(lap), delta_lap_time)*100.0\",\n"
             "      \"multiplier\": 0.01,\n"
             "      \"positive_is_good\": false,\n"
             "      \"decimals\": 2,\n"
-            "      \"limit\": 0.1\n"
+            "      \"limit\": 0.5\n"
             "    },\n"
             "    {\n"
-            "      \"name\": \"Delta speed\",\n"
+            "      \"id\": \"speed_delta\",\n"
             "      \"title\": \"SPEED\",\n"
             "      \"formula\": \"channel(device(calc), delta_speed)*100\",\n"
             "      \"multiplier\": 0.036,\n"
             "      \"positive_is_good\": true,\n"
             "      \"decimals\": 1,\n"
-            "      \"limit\": 5.0\n"
+            "      \"limit\": 1.0\n"
             "    }\n"
+            "  ],\n"
+            "  \"screens\": [\n"
+            "    { \"type\": \"single\", \"monitor\": \"lap_delta\" },\n"
+            "    { \"type\": \"single\", \"monitor\": \"speed_delta\" },\n"
+            "    { \"type\": \"dual\", \"top\": \"lap_delta\", \"bottom\": \"speed_delta\" }\n"
             "  ]\n"
             "}\n";
         StoragePolicy::writeConfigFile("/config.json", defaultJson);
@@ -222,29 +227,41 @@ public:
     void loadDefaultConfig() {
         state.isHud = false;
         state.clearMonitorConfigs();
+        state.clearScreenConfigs();
 
         MonitorConfig timeCfg;
-        strncpy(timeCfg.name, "Delta curr lap time", sizeof(timeCfg.name));
+        strncpy(timeCfg.id, "lap_delta", sizeof(timeCfg.id));
+        timeCfg.id[sizeof(timeCfg.id) - 1] = '\0';
         strncpy(timeCfg.title, "TIME", sizeof(timeCfg.title));
+        timeCfg.title[sizeof(timeCfg.title) - 1] = '\0';
         strncpy(timeCfg.formula, "channel(device(lap), delta_lap_time)*100.0", sizeof(timeCfg.formula));
+        timeCfg.formula[sizeof(timeCfg.formula) - 1] = '\0';
         timeCfg.multiplier = 0.01f;
         timeCfg.positiveIsGood = false;
         timeCfg.decimals = 2;
-        timeCfg.limit = 0.1f;
+        timeCfg.limit = 0.5f;
         state.addMonitorConfig(timeCfg);
 
         MonitorConfig speedCfg;
-        strncpy(speedCfg.name, "Delta speed", sizeof(speedCfg.name));
+        strncpy(speedCfg.id, "speed_delta", sizeof(speedCfg.id));
+        speedCfg.id[sizeof(speedCfg.id) - 1] = '\0';
         strncpy(speedCfg.title, "SPEED", sizeof(speedCfg.title));
+        speedCfg.title[sizeof(speedCfg.title) - 1] = '\0';
         strncpy(speedCfg.formula, "channel(device(calc), delta_speed)*100", sizeof(speedCfg.formula));
+        speedCfg.formula[sizeof(speedCfg.formula) - 1] = '\0';
         speedCfg.multiplier = 0.036f;
         speedCfg.positiveIsGood = true;
         speedCfg.decimals = 1;
-        speedCfg.limit = 5.0f;
+        speedCfg.limit = 1.0f;
         state.addMonitorConfig(speedCfg);
 
-        state.timeLimit = 0.1f;
-        state.speedLimit = 5.0f;
+        state.timeLimit = 0.5f;
+        state.speedLimit = 1.0f;
+
+        // Default 3 screens: single lap_delta, single speed_delta, dual
+        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 0, -1});
+        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, 1, -1});
+        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
     }
 
     void loadConfig() {
@@ -266,6 +283,7 @@ public:
 
         state.isHud = doc["isHud"] | false;
         state.clearMonitorConfigs();
+        state.clearScreenConfigs();
 
         JsonArray monitors = doc["monitors"];
         if (monitors.isNull() || monitors.size() == 0) {
@@ -275,11 +293,11 @@ public:
 
         for (JsonObject m : monitors) {
             MonitorConfig cfg;
-            const char* name = m["name"] | "";
+            const char* id = m["id"] | "";
             const char* title = m["title"] | "";
             const char* formula = m["formula"] | "";
-            strncpy(cfg.name, name, sizeof(cfg.name));
-            cfg.name[sizeof(cfg.name) - 1] = '\0';
+            strncpy(cfg.id, id, sizeof(cfg.id));
+            cfg.id[sizeof(cfg.id) - 1] = '\0';
             strncpy(cfg.title, title, sizeof(cfg.title));
             cfg.title[sizeof(cfg.title) - 1] = '\0';
             strncpy(cfg.formula, formula, sizeof(cfg.formula));
@@ -293,9 +311,43 @@ public:
 
         if (state.numMonitorConfigs == 0) {
             loadDefaultConfig();
-        } else {
-            if (state.numMonitorConfigs >= 1) state.timeLimit = state.monitorConfigs[0].limit;
-            if (state.numMonitorConfigs >= 2) state.speedLimit = state.monitorConfigs[1].limit;
+            return;
+        }
+
+        if (state.numMonitorConfigs >= 1) state.timeLimit = state.monitorConfigs[0].limit;
+        if (state.numMonitorConfigs >= 2) state.speedLimit = state.monitorConfigs[1].limit;
+
+        // Parse screens array
+        JsonArray screens = doc["screens"];
+        if (!screens.isNull()) {
+            for (JsonObject s : screens) {
+                const char* typeStr = s["type"] | "single";
+                if (strcmp(typeStr, "dual") == 0) {
+                    const char* topId = s["top"] | "";
+                    const char* btmId = s["bottom"] | "";
+                    int topIdx = state.findMonitorIndexById(topId);
+                    int btmIdx = state.findMonitorIndexById(btmId);
+                    if (topIdx >= 0 && btmIdx >= 0) {
+                        state.addScreenConfig(ScreenConfig{ScreenType::DUAL, topIdx, btmIdx});
+                    }
+                } else { // "single"
+                    const char* monId = s["monitor"] | "";
+                    int monIdx = state.findMonitorIndexById(monId);
+                    if (monIdx >= 0) {
+                        state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, monIdx, -1});
+                    }
+                }
+            }
+        }
+
+        // Fallback: If screens is omitted or empty
+        if (state.numScreenConfigs == 0) {
+            for (int i = 0; i < state.numMonitorConfigs; ++i) {
+                state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, i, -1});
+            }
+            if (state.numMonitorConfigs >= 2) {
+                state.addScreenConfig(ScreenConfig{ScreenType::DUAL, 0, 1});
+            }
         }
     }
 
@@ -445,7 +497,7 @@ private:
     bool configureMonitors() {
         state.resetMonitors();
         for (int i = 0; i < state.numMonitorConfigs; i++) {
-            if (!addMonitorConfig(state.monitorConfigs[i].name,
+            if (!addMonitorConfig(state.monitorConfigs[i].id,
                                   state.monitorConfigs[i].formula,
                                   state.monitorConfigs[i].multiplier,
                                   state.monitorConfigs[i].title,

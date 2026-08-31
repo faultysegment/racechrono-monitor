@@ -133,7 +133,7 @@ void test_applogic_json_config_custom_monitors(void) {
         "  \"isHud\": true,\n"
         "  \"monitors\": [\n"
         "    {\n"
-        "      \"name\": \"Custom Delta\",\n"
+        "      \"id\": \"custom_delta\",\n"
         "      \"title\": \"CDELTA\",\n"
         "      \"formula\": \"channel(device(lap), delta_lap_time)*100.0\",\n"
         "      \"multiplier\": 0.01,\n"
@@ -147,8 +147,57 @@ void test_applogic_json_config_custom_monitors(void) {
     logic.setup();
     TEST_ASSERT_TRUE(state.isHud);
     TEST_ASSERT_EQUAL(1, state.numMonitorConfigs);
+    TEST_ASSERT_EQUAL_STRING("custom_delta", state.monitorConfigs[0].id);
     TEST_ASSERT_EQUAL_STRING("CDELTA", state.monitorConfigs[0].title);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, state.monitorConfigs[0].limit);
+    TEST_ASSERT_EQUAL(1, state.numScreenConfigs);
+    TEST_ASSERT_EQUAL(ScreenType::SINGLE, state.screenConfigs[0].type);
+    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].primaryMonitorIndex);
+}
+
+void test_applogic_json_custom_screens(void) {
+    setUp();
+    MockStoragePolicy::reset();
+    MockStoragePolicy::configFileContent = R"json({
+        "isHud": false,
+        "monitors": [
+            {
+                "id": "delta_time",
+                "title": "TIME",
+                "formula": "channel(device(lap), delta_lap_time)*100.0",
+                "multiplier": 0.01,
+                "positive_is_good": false,
+                "decimals": 2,
+                "limit": 0.5
+            },
+            {
+                "id": "delta_speed",
+                "title": "SPEED",
+                "formula": "channel(device(calc), delta_speed)*100",
+                "multiplier": 0.036,
+                "positive_is_good": true,
+                "decimals": 1,
+                "limit": 1.0
+            }
+        ],
+        "screens": [
+            { "type": "dual", "top": "delta_speed", "bottom": "delta_time" },
+            { "type": "single", "monitor": "delta_speed" }
+        ]
+    })json";
+
+    logic.setup();
+    TEST_ASSERT_EQUAL(2, state.numMonitorConfigs);
+    TEST_ASSERT_EQUAL(2, state.numScreenConfigs);
+
+    // Screen 0 is dual with top=speed (idx 1) and bottom=time (idx 0)
+    TEST_ASSERT_EQUAL(ScreenType::DUAL, state.screenConfigs[0].type);
+    TEST_ASSERT_EQUAL(1, state.screenConfigs[0].primaryMonitorIndex);
+    TEST_ASSERT_EQUAL(0, state.screenConfigs[0].secondaryMonitorIndex);
+
+    // Screen 1 is single with monitor=speed (idx 1)
+    TEST_ASSERT_EQUAL(ScreenType::SINGLE, state.screenConfigs[1].type);
+    TEST_ASSERT_EQUAL(1, state.screenConfigs[1].primaryMonitorIndex);
 }
 
 void test_applogic_json_config_fallback_defaults(void) {
@@ -161,6 +210,7 @@ void test_applogic_json_config_fallback_defaults(void) {
     TEST_ASSERT_EQUAL(2, state.numMonitorConfigs);
     TEST_ASSERT_EQUAL_STRING("TIME", state.monitorConfigs[0].title);
     TEST_ASSERT_EQUAL_STRING("SPEED", state.monitorConfigs[1].title);
+    TEST_ASSERT_EQUAL(3, state.numScreenConfigs);
 }
 
 void test_applogic_json_config_auto_create(void) {
@@ -171,6 +221,7 @@ void test_applogic_json_config_auto_create(void) {
 
     logic.setup();
     TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"monitors\"") != std::string::npos);
+    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"screens\"") != std::string::npos);
     TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"TIME\"") != std::string::npos);
 }
 
@@ -227,6 +278,7 @@ void setup() {
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_screen_persistence);
     RUN_TEST(test_applogic_json_config_custom_monitors);
+    RUN_TEST(test_applogic_json_custom_screens);
     RUN_TEST(test_applogic_json_config_fallback_defaults);
     RUN_TEST(test_applogic_json_config_auto_create);
     RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
@@ -242,6 +294,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_applogic_navigation_scroll);
     RUN_TEST(test_applogic_screen_persistence);
     RUN_TEST(test_applogic_json_config_custom_monitors);
+    RUN_TEST(test_applogic_json_custom_screens);
     RUN_TEST(test_applogic_json_config_fallback_defaults);
     RUN_TEST(test_applogic_json_config_auto_create);
     RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
