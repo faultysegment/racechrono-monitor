@@ -25,7 +25,7 @@
 **Interfaces:**
 - Produces: `<ArduinoJson.h>` available across `T_Embed_CC1101`, `T_Display_S3_AMOLED`, `unit_tests`, and `run_simulator` environments.
 
-- [ ] **Step 1: Update `platformio.ini` with `ArduinoJson` library dependency**
+- [x] **Step 1: Update `platformio.ini` with `ArduinoJson` library dependency**
 
 Add `bblanchon/ArduinoJson@^7.0.4` to `lib_deps` and configure native environments.
 
@@ -49,12 +49,12 @@ lib_deps =
     bblanchon/ArduinoJson@^7.0.4
 ```
 
-- [ ] **Step 2: Run test compilation to verify `ArduinoJson` is downloaded and resolvable**
+- [x] **Step 2: Run test compilation to verify `ArduinoJson` is downloaded and resolvable**
 
 Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests`
 Expected: Passes or compiles with `ArduinoJson` included.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add platformio.ini
@@ -73,78 +73,15 @@ git commit -m "build: add ArduinoJson v7 dependency to platformio.ini"
 - Consumes: None
 - Produces: `struct MonitorConfig`, `state.monitorConfigs`, `state.numMonitorConfigs`, `state.isHud`, removal of `state.isEditMode`.
 
-- [ ] **Step 1: Write unit tests in `test/test_appstate/test_appstate.cpp` for `MonitorConfig` and `isHud`**
+- [x] **Step 1: Write unit tests in `test/test_appstate/test_appstate.cpp` for `MonitorConfig` and `isHud`**
 
-```cpp
-void test_appstate_monitor_configs(void) {
-    AppState s;
-    s.reset();
-    TEST_ASSERT_EQUAL(0, s.numMonitorConfigs);
-    TEST_ASSERT_FALSE(s.isHud);
+- [x] **Step 2: Run test to verify it fails**
 
-    s.isHud = true;
-    TEST_ASSERT_TRUE(s.isHud);
+- [x] **Step 3: Update `src/AppState.h`**
 
-    MonitorConfig cfg;
-    strncpy(cfg.name, "Delta time", sizeof(cfg.name));
-    strncpy(cfg.title, "TIME", sizeof(cfg.title));
-    strncpy(cfg.formula, "channel(device(lap), delta_lap_time)*100.0", sizeof(cfg.formula));
-    cfg.multiplier = 0.01f;
-    cfg.positiveIsGood = false;
-    cfg.decimals = 2;
-    cfg.limit = 0.1f;
+- [x] **Step 4: Run unit tests to verify they pass**
 
-    s.addMonitorConfig(cfg);
-    TEST_ASSERT_EQUAL(1, s.numMonitorConfigs);
-    TEST_ASSERT_EQUAL_STRING("TIME", s.monitorConfigs[0].title);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.1f, s.monitorConfigs[0].limit);
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests -f test_appstate`
-Expected: FAIL (missing `MonitorConfig`, `addMonitorConfig`, `isHud`).
-
-- [ ] **Step 3: Update `src/AppState.h`**
-
-Define `MonitorConfig`, remove `isEditMode`, add `monitorConfigs`, `numMonitorConfigs`, `isHud`, `addMonitorConfig(const MonitorConfig& cfg)` and `clearMonitorConfigs()`.
-
-```cpp
-struct MonitorConfig {
-    char name[MONITOR_NAME_MAX + 1];
-    char title[16];
-    char formula[128];
-    float multiplier;
-    bool positiveIsGood;
-    int decimals;
-    float limit;
-};
-
-// In AppState:
-bool isHud = false;
-MonitorConfig monitorConfigs[MAX_MONITORS];
-int numMonitorConfigs = 0;
-
-void clearMonitorConfigs() {
-    numMonitorConfigs = 0;
-}
-
-bool addMonitorConfig(const MonitorConfig& cfg) {
-    if (numMonitorConfigs < MAX_MONITORS) {
-        monitorConfigs[numMonitorConfigs++] = cfg;
-        return true;
-    }
-    return false;
-}
-```
-
-- [ ] **Step 4: Run unit tests to verify they pass**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests -f test_appstate`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/AppState.h test/test_appstate/test_appstate.cpp
@@ -164,133 +101,15 @@ git commit -m "feat: add MonitorConfig and isHud state, remove isEditMode from A
 **Interfaces:**
 - Produces: `StoragePolicy::isCardPresent()`, `StoragePolicy::readConfigFile(const char*)`, `StoragePolicy::writeConfigFile(const char*, const char*)`.
 
-- [ ] **Step 1: Update `MockStoragePolicy.h`**
+- [x] **Step 1: Update `MockStoragePolicy.h`**
 
-```cpp
-#pragma once
-#include <string>
-#include <map>
+- [x] **Step 2: Update `RealStoragePolicy.h` for Native Simulator**
 
-class MockStoragePolicy {
-public:
-    static std::map<std::string, float> store;
-    static std::map<std::string, int> storeInt;
-    static bool cardPresent;
-    static std::string configFileContent;
-    static std::string lastWrittenFileContent;
+- [x] **Step 3: Update `AmoledStoragePolicy.h` and `T-Embed RealStoragePolicy.h`**
 
-    static void init() {}
-    
-    static bool isCardPresent() {
-        return cardPresent;
-    }
+- [x] **Step 4: Run unit tests to verify compilation**
 
-    static std::string readConfigFile(const char* filename = "/config.json") {
-        return configFileContent;
-    }
-
-    static bool writeConfigFile(const char* filename, const char* content) {
-        lastWrittenFileContent = content;
-        configFileContent = content;
-        return true;
-    }
-
-    static float getFloat(const char* key, float defaultValue) {
-        if (store.find(key) != store.end()) return store[key];
-        return defaultValue;
-    }
-    
-    static void putFloat(const char* key, float value) {
-        store[key] = value;
-    }
-
-    static int getInt(const char* key, int defaultValue) {
-        if (storeInt.find(key) != storeInt.end()) return storeInt[key];
-        return defaultValue;
-    }
-
-    static void putInt(const char* key, int value) {
-        storeInt[key] = value;
-    }
-
-    static void reset() {
-        store.clear();
-        storeInt.clear();
-        cardPresent = true;
-        configFileContent = "";
-        lastWrittenFileContent = "";
-    }
-};
-```
-
-- [ ] **Step 2: Update `RealStoragePolicy.h` for Native Simulator**
-
-```cpp
-#pragma once
-#include <map>
-#include <string>
-#include <fstream>
-#include <sstream>
-
-class RealStoragePolicy {
-    static std::map<std::string, float> store;
-    static std::map<std::string, int> storeInt;
-
-public:
-    static void init() {}
-    
-    static bool isCardPresent() {
-        return true;
-    }
-
-    static std::string readConfigFile(const char* filename = "config.json") {
-        // Strip leading slash if present for native filesystem
-        const char* path = (filename && filename[0] == '/') ? filename + 1 : filename;
-        std::ifstream file(path);
-        if (!file.is_open()) return "";
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-
-    static bool writeConfigFile(const char* filename, const char* content) {
-        const char* path = (filename && filename[0] == '/') ? filename + 1 : filename;
-        std::ofstream file(path);
-        if (!file.is_open()) return false;
-        file << content;
-        return true;
-    }
-
-    static float getFloat(const char* key, float defaultValue) {
-        if (store.find(key) != store.end()) return store[key];
-        return defaultValue;
-    }
-    
-    static void putFloat(const char* key, float value) {
-        store[key] = value;
-    }
-
-    static int getInt(const char* key, int defaultValue) {
-        if (storeInt.find(key) != storeInt.end()) return storeInt[key];
-        return defaultValue;
-    }
-
-    static void putInt(const char* key, int value) {
-        storeInt[key] = value;
-    }
-};
-```
-
-- [ ] **Step 3: Update `AmoledStoragePolicy.h` and `T-Embed RealStoragePolicy.h`**
-
-Add ESP32 SD & SPI initialization, `isCardPresent()`, `readConfigFile()`, and `writeConfigFile()` in `AmoledStoragePolicy.h` (SPI pins: `SD_CS=38, SD_MOSI=39, SD_MISO=40, SD_SCLK=41`) and `src/Device_T_Embed_CC1101/Policies/RealStoragePolicy.h` (SPI pins: `SD_CS=13, SD_MOSI=11, SD_MISO=13, SD_SCLK=12`).
-
-- [ ] **Step 4: Run unit tests to verify compilation**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/Device_Mock/Policies/MockStoragePolicy.h src/Device_Native/Policies/RealStoragePolicy.h src/Device_T_Display_S3_AMOLED/Policies/AmoledStoragePolicy.h src/Device_T_Embed_CC1101/Policies/RealStoragePolicy.h
@@ -309,79 +128,15 @@ git commit -m "feat: implement StoragePolicy MicroSD and file I/O operations"
 - Consumes: `StoragePolicy`, `ArduinoJson`, `AppState::MonitorConfig`.
 - Produces: `AppLogic::loadConfig()`, `AppLogic::saveDefaultConfig()`, dynamic `configureMonitors()`, removed `toggleEditMode()` and `changeValue()`.
 
-- [ ] **Step 1: Write unit tests in `test/test_applogic/test_applogic.cpp`**
+- [x] **Step 1: Write unit tests in `test/test_applogic/test_applogic.cpp`**
 
-```cpp
-void test_applogic_json_config_custom_monitors(void) {
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = R"json({
-        "isHud": true,
-        "monitors": [
-            {
-                "name": "Custom Delta",
-                "title": "CDELTA",
-                "formula": "channel(device(lap), delta_lap_time)*100.0",
-                "multiplier": 0.01,
-                "positive_is_good": false,
-                "decimals": 2,
-                "limit": 0.25
-            }
-        ]
-    })json";
+- [x] **Step 2: Run test to verify it fails**
 
-    logic.setup();
-    TEST_ASSERT_TRUE(state.isHud);
-    TEST_ASSERT_EQUAL(1, state.numMonitorConfigs);
-    TEST_ASSERT_EQUAL_STRING("CDELTA", state.monitorConfigs[0].title);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, state.monitorConfigs[0].limit);
-}
+- [x] **Step 3: Implement JSON loading, fallback, and dynamic monitor registration in `AppLogic.h`**
 
-void test_applogic_json_config_fallback_defaults(void) {
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = ""; // Empty file / missing
+- [x] **Step 4: Run unit tests to verify they pass**
 
-    logic.setup();
-    TEST_ASSERT_FALSE(state.isHud);
-    TEST_ASSERT_EQUAL(2, state.numMonitorConfigs);
-    TEST_ASSERT_EQUAL_STRING("TIME", state.monitorConfigs[0].title);
-    TEST_ASSERT_EQUAL_STRING("SPEED", state.monitorConfigs[1].title);
-}
-
-void test_applogic_json_config_auto_create(void) {
-    MockStoragePolicy::reset();
-    MockStoragePolicy::cardPresent = true;
-    MockStoragePolicy::configFileContent = "";
-
-    logic.setup();
-    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"monitors\"") != std::string::npos);
-    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"TIME\"") != std::string::npos);
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests -f test_applogic`
-Expected: FAIL.
-
-- [ ] **Step 3: Implement JSON loading, fallback, and dynamic monitor registration in `AppLogic.h`**
-
-1. Include `<ArduinoJson.h>`.
-2. Add `loadConfig()`:
-   - Reads `StoragePolicy::readConfigFile("/config.json")`.
-   - If empty and `StoragePolicy::isCardPresent()`: call `saveDefaultConfig()`.
-   - Parse with `JsonDocument doc; deserializeJson(doc, jsonStr);`.
-   - If valid, parse `isHud` and `monitors` array.
-   - If invalid or empty, populate default 2 monitors (`TIME` limit 0.1, `SPEED` limit 5.0) and `isHud = false`.
-3. In `configureMonitors()`: iterate over `state.numMonitorConfigs` and call `addMonitorConfig` for each item.
-4. Remove `toggleEditMode()`, `changeValue()`, and edit-mode checks.
-5. In `processEvent()`: ignore `HW_ACTION_TOGGLE`.
-
-- [ ] **Step 4: Run unit tests to verify they pass**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests -f test_applogic`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/AppLogic.h test/test_applogic/test_applogic.cpp
@@ -408,28 +163,15 @@ git commit -m "feat: parse config.json, dynamic monitor configuration, and remov
 - Consumes: `state.isHud`, dynamic `state.monitors`.
 - Produces: Clean UI without edit mode indicators or config screens, single registration per screen, global HUD mode.
 
-- [ ] **Step 1: Delete `ConfigMonitorScreen.h` and `CircularConfigMonitorScreen.h`**
+- [x] **Step 1: Delete `ConfigMonitorScreen.h` and `CircularConfigMonitorScreen.h`**
 
-Run `git rm` on `src/Screens/ConfigMonitorScreen.h` and `src/Screens/CircularConfigMonitorScreen.h`.
+- [x] **Step 2: Remove edit-mode drawing in `CircularUI.h`, `CircularMonitorScreen.h`, and `MonitorScreen.h`**
 
-- [ ] **Step 2: Remove edit-mode drawing in `CircularUI.h`, `CircularMonitorScreen.h`, and `MonitorScreen.h`**
+- [x] **Step 3: Update `NativeViewPolicy.h`, `AmoledViewPolicy.h`, `TEmbedViewPolicy.h`, and `View.h`**
 
-Remove `drawPlusMinus` and `drawCheckmark` from `CircularUI.h`. Remove `isEditMode` branches from `CircularMonitorScreen.h` and `MonitorScreen.h`.
+- [x] **Step 4: Update `test/test_view/test_view.cpp` and run tests**
 
-- [ ] **Step 3: Update `NativeViewPolicy.h`, `AmoledViewPolicy.h`, `TEmbedViewPolicy.h`, and `View.h`**
-
-- Set `tft.setHudMode(state.isHud)` in `View::update()`.
-- Screen registration:
-  - Disconnected: 1 screen (`CircularDisconnectedScreen` / `DisconnectedMsgScreen`).
-  - Connected: Monitor screens for `MAX_MONITORS` (up to 4).
-  - No duplicate HUD screen wrapper entries in the carousel.
-
-- [ ] **Step 4: Update `test/test_view/test_view.cpp` and run tests**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests`
-Expected: PASS for all tests.
-
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -u
@@ -444,45 +186,13 @@ git commit -m "refactor: delete config screens, remove edit mode from UI, apply 
 - Create: `config.json` (root of project for simulator)
 - Test: `env:unit_tests` and `env:run_simulator`
 
-- [ ] **Step 1: Create default `config.json` in project root**
+- [x] **Step 1: Create default `config.json` in project root**
 
-```json
-{
-  "isHud": false,
-  "monitors": [
-    {
-      "name": "Delta curr lap time",
-      "title": "TIME",
-      "formula": "channel(device(lap), delta_lap_time)*100.0",
-      "multiplier": 0.01,
-      "positive_is_good": false,
-      "decimals": 2,
-      "limit": 0.1
-    },
-    {
-      "name": "Delta speed",
-      "title": "SPEED",
-      "formula": "channel(device(calc), delta_speed)*100",
-      "multiplier": 0.036,
-      "positive_is_good": true,
-      "decimals": 1,
-      "limit": 5.0
-    }
-  ]
-}
-```
+- [x] **Step 2: Run all unit tests**
 
-- [ ] **Step 2: Run all unit tests**
+- [x] **Step 3: Run simulator build**
 
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe test -e unit_tests`
-Expected: 100% PASS across `test_applogic`, `test_appstate`, `test_view`.
-
-- [ ] **Step 3: Run simulator build**
-
-Run: `C:\Users\faultysegment\.platformio\penv\Scripts\platformio.exe run -e run_simulator`
-Expected: Compiles and links successfully.
-
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add config.json docs/superpowers/plans/2026-08-31-sd-json-config.md
