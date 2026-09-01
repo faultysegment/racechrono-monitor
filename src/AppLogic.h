@@ -116,32 +116,36 @@ public:
         wasIndicating = isIndicating;
 
         // Configuration state machine tick
-        if (isConnected && !state.isConfiguring && !state.isConfigured) {
+        if (isConnected && !state.isConfigured && !state.isConfiguring(HWPolicy::millis())) {
             if (isIndicating) {
                 bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
             }
+        }
+
+        // WebUI heartbeat timeout check
+        if (state.lastHeartbeatMillis != 0 && (HWPolicy::millis() - state.lastHeartbeatMillis >= AppState::CONFIG_MODE_TIMEOUT_MS)) {
+            state.lastHeartbeatMillis = 0;
+            bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
         }
     }
 
     void processEvent(const Event& e) {
         switch (e.type) {
-            case EventType::HW_PWR_BTN_LONG_PRESS:
-                bus.push(Event{EventType::UI_SHOW_POWER_OFF, 0, 0, 0});
-                HWPolicy::delay(500); 
-                HWPolicy::powerOffBoard();
-                break;
-
-            case EventType::HW_ACTION_TOGGLE:
-                // No-op: editing on device is disabled
-                break;
-
             case EventType::HW_NAV_DELTA:
                 changePage(e.arg1);
                 break;
 
+            case EventType::HW_ACTION_TOGGLE:
+                // No-op
+                break;
+
+            case EventType::HW_PWR_BTN_LONG_PRESS:
+                HWPolicy::powerOffBoard();
+                break;
+
             case EventType::BLE_CONNECTED:
                 state.isConnected = true;
-                state.reset();
+                state.isConfigured = false;
                 restoreConnectedScreen();
                 bus.push(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
                 break;
@@ -171,15 +175,12 @@ public:
             case EventType::BLE_CONFIG_MONITOR:
                 if (e.str_arg.empty()) {
                     // Start configuring
-                    state.isConfiguring = true;
                     bus.push(Event{EventType::UI_SHOW_CONFIGURING, 0, 0, 0});
                     if (configureMonitors()) {
                         bus.push(Event{EventType::UI_SHOW_CONFIG_DONE, 0, 0, 0});
                         state.isConfigured = true;
-                        state.isConfiguring = false;
                         bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                     } else {
-                        state.isConfiguring = false;
                         bus.push(Event{EventType::UI_SHOW_CONFIG_FAIL, 0, 0, 0});
                     }
                 } else {
@@ -189,18 +190,18 @@ public:
                 break;
 
             case EventType::EVENT_CONFIG_MODE_ENTER:
-                state.isConfiguring = true;
+                state.lastHeartbeatMillis = HWPolicy::millis();
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
             case EventType::EVENT_CONFIG_MODE_EXIT:
-                state.isConfiguring = false;
+                state.lastHeartbeatMillis = 0;
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
             case EventType::EVENT_CONFIG_RELOAD:
+                state.lastHeartbeatMillis = 0;
                 loadConfig();
-                state.isConfiguring = false;
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
@@ -493,7 +494,6 @@ private:
                     // If 1 byte payload: CMD_TYPE_REMOVE_ALL command from RaceChrono
                     if (rxData.length() == 1) {
                         state.isConfigured = false;
-                        state.isConfiguring = false;
                         bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
                     }
                     break;
@@ -501,7 +501,6 @@ private:
                 case CMD_TYPE_UPDATE:
                     // Reconfigure request from RaceChrono (session start / continue)
                     state.isConfigured = false;
-                    state.isConfiguring = false;
                     bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
                     break;
                 case CMD_RESULT_EQUATION_EXCEPTION:

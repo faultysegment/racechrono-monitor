@@ -196,7 +196,8 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
 void test_view_configuring_screen(void) {
     state.reset();
     state.isConnected = false;
-    state.isConfiguring = true;
+    MockHWPolicy::currentMillis = 5000;
+    state.lastHeartbeatMillis = 5000;
     MockDisplayPolicy::reset();
 
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});

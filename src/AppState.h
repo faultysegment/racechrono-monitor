@@ -81,8 +81,14 @@ public:
     bool isHud;
 
     bool isConnected;
-    bool isConfiguring;
+    uint32_t lastHeartbeatMillis;
     bool isConfigured;
+
+    static const uint32_t CONFIG_MODE_TIMEOUT_MS = 60000;
+
+    bool isConfiguring(uint32_t currentMillis) const {
+        return (lastHeartbeatMillis != 0) && ((currentMillis - lastHeartbeatMillis) < CONFIG_MODE_TIMEOUT_MS);
+    }
     
     int currentScreenIndex;
     int disconnectedScreenIndex;
@@ -110,7 +116,7 @@ public:
     }
 
     void reset() {
-        isConfiguring = false;
+        lastHeartbeatMillis = 0;
         isConfigured = false;
         currentScreenIndex = 0;
         webuiConfig = WebUIConfig();

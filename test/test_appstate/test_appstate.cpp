@@ -18,7 +18,8 @@ void test_appstate_initialization(void) {
     TEST_ASSERT_EQUAL(0, state.nextMonitorId);
     TEST_ASSERT_FALSE(state.isConnected);
     TEST_ASSERT_FALSE(state.isConfigured);
-    TEST_ASSERT_FALSE(state.isConfiguring);
+    TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
+    TEST_ASSERT_FALSE(state.isConfiguring(0));
     TEST_ASSERT_EQUAL(0, state.currentScreenIndex);
     TEST_ASSERT_EQUAL(0, state.disconnectedScreenIndex);
     TEST_ASSERT_FALSE(state.isHud);
@@ -140,17 +141,20 @@ void test_appstate_webui_config(void) {
     TEST_ASSERT_FALSE(s.webuiConfig.enabled);
     TEST_ASSERT_EQUAL_STRING("", s.webuiConfig.ssid);
     TEST_ASSERT_EQUAL_STRING("", s.webuiConfig.password);
-    TEST_ASSERT_FALSE(s.isConfiguring);
+    TEST_ASSERT_EQUAL_UINT32(0, s.lastHeartbeatMillis);
+    TEST_ASSERT_FALSE(s.isConfiguring(1000));
 
     s.webuiConfig.enabled = true;
     strncpy(s.webuiConfig.ssid, "MyAP", sizeof(s.webuiConfig.ssid));
     strncpy(s.webuiConfig.password, "12345678", sizeof(s.webuiConfig.password));
-    s.isConfiguring = true;
+    s.lastHeartbeatMillis = 10000;
 
     TEST_ASSERT_TRUE(s.webuiConfig.enabled);
     TEST_ASSERT_EQUAL_STRING("MyAP", s.webuiConfig.ssid);
     TEST_ASSERT_EQUAL_STRING("12345678", s.webuiConfig.password);
-    TEST_ASSERT_TRUE(s.isConfiguring);
+    TEST_ASSERT_TRUE(s.isConfiguring(10000));
+    TEST_ASSERT_TRUE(s.isConfiguring(69999));  // 59.999s elapsed -> true
+    TEST_ASSERT_FALSE(s.isConfiguring(70000)); // 60.000s elapsed -> false
 }
 
 #ifdef ARDUINO

@@ -319,24 +319,46 @@ void test_applogic_json_webui_config(void) {
 
 void test_applogic_config_mode_events(void) {
     setUp();
+    MockHWPolicy::reset();
     logic.setup();
-    TEST_ASSERT_FALSE(state.isConfiguring);
+    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
 
     // Enter config mode
+    MockHWPolicy::currentMillis = 5000;
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
-    TEST_ASSERT_TRUE(state.isConfiguring);
+    TEST_ASSERT_EQUAL_UINT32(5000, state.lastHeartbeatMillis);
+    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
 
     // Exit config mode
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_EXIT, 0, 0, 0});
-    TEST_ASSERT_FALSE(state.isConfiguring);
+    TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
+    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
 
     // Enter config mode again
+    MockHWPolicy::currentMillis = 10000;
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
-    TEST_ASSERT_TRUE(state.isConfiguring);
+    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
 
     // Config reload exits config mode
     logic.processEvent(Event{EventType::EVENT_CONFIG_RELOAD, 0, 0, 0});
-    TEST_ASSERT_FALSE(state.isConfiguring);
+    TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
+    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
+
+    // Test automatic timeout in pollLogic
+    MockHWPolicy::currentMillis = 20000;
+    logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
+    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+
+    // Advance time by 30s -> still configuring
+    MockHWPolicy::currentMillis += 30000;
+    logic.pollLogic();
+    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+
+    // Advance time past 60s -> pollLogic expires config mode
+    MockHWPolicy::currentMillis += 30001;
+    logic.pollLogic();
+    TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
+    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
 }
 
 #ifdef ARDUINO

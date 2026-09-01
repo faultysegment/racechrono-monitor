@@ -57,7 +57,7 @@ public:
     void processEvent(const Event& e) {
         switch (e.type) {
             case EventType::UI_UPDATE:
-                if (!state.isConnected || state.isConfigured || state.isConfiguring) {
+                if (!state.isConnected || state.isConfigured || state.isConfiguring(HWPolicy::millis())) {
                     update();
                 }
                 break;
@@ -103,7 +103,8 @@ private:
     void update() {
         int currentIdx = 0;
         IScreen<DisplayPolicy>* activeScreen = nullptr;
-        if (state.isConfiguring && configuringScreen) {
+        bool isConfiguring = state.isConfiguring(HWPolicy::millis());
+        if (isConfiguring && configuringScreen) {
             activeScreen = configuringScreen;
             currentIdx = 999;
         } else if (state.isConnected) {
@@ -121,11 +122,11 @@ private:
 
         tft.setHudMode(state.isHud);
 
-        if (!displayStarted || lastScreenIndex != currentIdx || lastConnected != state.isConnected || lastConfiguring != state.isConfiguring) {
+        if (!displayStarted || lastScreenIndex != currentIdx || lastConnected != state.isConnected || lastConfiguring != isConfiguring) {
             displayStarted = true;
             lastScreenIndex = currentIdx;
             lastConnected = state.isConnected;
-            lastConfiguring = state.isConfiguring;
+            lastConfiguring = isConfiguring;
             
             activeScreen->onShow(tft, state);
             tft.drawBattery(state.batteryPercent, true);

@@ -79,6 +79,11 @@ public:
             if (bus) bus->push(Event{EventType::EVENT_DEVICE_REBOOT, 0, 0, 0});
         });
 
+        server->on("/api/heartbeat", HTTP_POST, [this]() {
+            if (bus) bus->push(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
+            server->send(200, "application/json", "{\"status\":\"ok\"}");
+        });
+
         server->begin();
         isRunning = true;
     }

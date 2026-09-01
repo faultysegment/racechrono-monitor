@@ -460,7 +460,16 @@ function rebootDevice() {
     .catch(() => alert('Reboot command sent.'));
 }
 
-window.onload = init;
+function startHeartbeat() {
+  setInterval(() => {
+    fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
+  }, 10000);
+}
+
+window.onload = () => {
+  init();
+  startHeartbeat();
+};
 </script>
 </body>
 </html>
