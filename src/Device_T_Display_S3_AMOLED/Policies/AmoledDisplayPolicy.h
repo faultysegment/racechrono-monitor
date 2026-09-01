@@ -18,22 +18,27 @@ public:
         Arduino_GFX*& gfx = getGfx();
         Arduino_Canvas*& canvas = getCanvas();
 
+#if defined(LCD_EN)
+        pinMode(LCD_EN, OUTPUT);
+        digitalWrite(LCD_EN, HIGH);
+        delay(100);
+#endif
+
         if (!bus) {
             bus = new Arduino_ESP32QSPI(
                 LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
         }
         if (!gfx) {
-            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 6, 0, 0, 0);
+            gfx = new Arduino_SH8601(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
         }
 
-#if defined(LCD_EN)
-        pinMode(LCD_EN, OUTPUT);
-        digitalWrite(LCD_EN, HIGH);
-        delay(50);
-#endif
-
-        gfx->begin(40000000);
+        gfx->begin();
         gfx->fillScreen(0x0000);
+
+        for (int i = 0; i <= 255; i += 5) {
+            gfx->Display_Brightness((uint8_t)i);
+            delay(2);
+        }
         gfx->Display_Brightness(255);
 
         if (!canvas) {
