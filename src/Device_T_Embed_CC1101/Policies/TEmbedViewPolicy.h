@@ -4,12 +4,14 @@
 #include "Screens/MonitorScreen.h"
 #include "Screens/DualMonitorScreen.h"
 #include "Screens/DisconnectedMsgScreen.h"
+#include "Screens/ConfiguringScreen.h"
 
 template <typename DisplayPolicy>
 class TEmbedViewPolicy {
     MonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
     DualMonitorScreen<DisplayPolicy> dualScreens[MAX_SCREENS];
     DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
+    ConfiguringScreen<DisplayPolicy> configuringScreen;
 
 public:
     TEmbedViewPolicy(AppState& state) {}
@@ -28,5 +30,6 @@ public:
             }
         }
         appView.addDisconnectedScreen(&disconnectedMsg);
+        appView.setConfiguringScreen(&configuringScreen);
     }
 };

@@ -9,7 +9,7 @@
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
 public:
-    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastConnected(false) {}
+    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastConnected(false), lastConfiguring(false), configuringScreen(nullptr) {}
 
     void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
         connectedScreens.push_back(screen);
@@ -21,9 +21,14 @@ public:
         state.numDisconnectedScreens = disconnectedScreens.size();
     }
 
+    void setConfiguringScreen(IScreen<DisplayPolicy>* screen) {
+        configuringScreen = screen;
+    }
+
     void clearScreens() {
         connectedScreens.clear();
         disconnectedScreens.clear();
+        configuringScreen = nullptr;
         state.numConnectedScreens = 0;
         state.numDisconnectedScreens = 0;
         lastScreenIndex = -1;
@@ -52,7 +57,7 @@ public:
     void processEvent(const Event& e) {
         switch (e.type) {
             case EventType::UI_UPDATE:
-                if (!state.isConnected || state.isConfigured) {
+                if (!state.isConnected || state.isConfigured || state.isConfiguring) {
                     update();
                 }
                 break;
@@ -61,7 +66,7 @@ public:
                 showMessage("BLE connected!", 0x001F, 0x0000); 
                 break;
             case EventType::UI_SHOW_DISCONNECTED:
-                displayStarted = false;
+                displayStarted = false; 
                 showMessage("Disconnected", 0xF800, 0x0000); 
                 break;
             case EventType::UI_SHOW_CONFIGURING:
@@ -98,7 +103,10 @@ private:
     void update() {
         int currentIdx = 0;
         IScreen<DisplayPolicy>* activeScreen = nullptr;
-        if (state.isConnected) {
+        if (state.isConfiguring && configuringScreen) {
+            activeScreen = configuringScreen;
+            currentIdx = 999;
+        } else if (state.isConnected) {
             if (!connectedScreens.empty()) {
                 currentIdx = state.currentScreenIndex % connectedScreens.size();
                 activeScreen = connectedScreens[currentIdx];
@@ -113,10 +121,11 @@ private:
 
         tft.setHudMode(state.isHud);
 
-        if (!displayStarted || lastScreenIndex != currentIdx || lastConnected != state.isConnected) {
+        if (!displayStarted || lastScreenIndex != currentIdx || lastConnected != state.isConnected || lastConfiguring != state.isConfiguring) {
             displayStarted = true;
             lastScreenIndex = currentIdx;
             lastConnected = state.isConnected;
+            lastConfiguring = state.isConfiguring;
             
             activeScreen->onShow(tft, state);
             tft.drawBattery(state.batteryPercent, true);
@@ -138,7 +147,9 @@ private:
     bool displayStarted;
     int lastScreenIndex;
     bool lastConnected;
+    bool lastConfiguring;
 
+    IScreen<DisplayPolicy>* configuringScreen;
     std::vector<IScreen<DisplayPolicy>*> connectedScreens;
     std::vector<IScreen<DisplayPolicy>*> disconnectedScreens;
 };

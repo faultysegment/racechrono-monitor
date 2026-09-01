@@ -193,6 +193,16 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
     }
 }
 
+void test_view_configuring_screen(void) {
+    state.reset();
+    state.isConnected = false;
+    state.isConfiguring = true;
+    MockDisplayPolicy::reset();
+
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("CONFIG MODE") != std::string::npos);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -207,6 +217,7 @@ void setup() {
     RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
+    RUN_TEST(test_view_configuring_screen);
     UNITY_END();
 }
 void loop() {}
@@ -223,6 +234,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
+    RUN_TEST(test_view_configuring_screen);
     UNITY_END();
     return 0;
 }

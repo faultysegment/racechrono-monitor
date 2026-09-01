@@ -3,11 +3,13 @@
 #include "../../View.h"
 #include "../../Screens/CircularMonitorScreen.h"
 #include "../../Screens/CircularDisconnectedScreen.h"
+#include "../../Screens/CircularConfiguringScreen.h"
 
 template <typename DisplayPolicy>
 class AmoledViewPolicy {
     CircularMonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
     CircularDisconnectedScreen<DisplayPolicy> disconnectedMsg;
+    CircularConfiguringScreen<DisplayPolicy> configuringScreen;
 
 public:
     AmoledViewPolicy(AppState& state) {}
@@ -21,5 +23,6 @@ public:
             appView.addConnectedScreen(&singleScreens[i]);
         }
         appView.addDisconnectedScreen(&disconnectedMsg);
+        appView.setConfiguringScreen(&configuringScreen);
     }
 };

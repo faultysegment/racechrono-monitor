@@ -5,6 +5,7 @@
 #include "Screens/DualMonitorScreen.h"
 #include "Screens/CircularMonitorScreen.h"
 #include "Screens/DisconnectedMsgScreen.h"
+#include "Screens/ConfiguringScreen.h"
 
 template <typename DisplayPolicy>
 class NativeViewPolicy {
@@ -12,6 +13,7 @@ class NativeViewPolicy {
     CircularMonitorScreen<DisplayPolicy> circScreens[MAX_SCREENS];
     DualMonitorScreen<DisplayPolicy> dualScreens[MAX_SCREENS];
     DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
+    ConfiguringScreen<DisplayPolicy> configuringScreen;
 
 public:
     NativeViewPolicy(AppState& state) {}
@@ -32,5 +34,6 @@ public:
             }
         }
         appView.addDisconnectedScreen(&disconnectedMsg);
+        appView.setConfiguringScreen(&configuringScreen);
     }
 };
