@@ -12,6 +12,8 @@ public:
     static void powerOffBoard() {
         exit(0);
     }
+
+    static void reboot() {}
     
     static int getBatteryPercent() { 
         return 100; 

@@ -74,6 +74,10 @@ struct RealHWPolicy {
         esp_deep_sleep_start();
     }
 
+    static void reboot() {
+        ESP.restart();
+    }
+
     static void initBattery() {
         Wire.begin(8, 18);
         if (PMU.init(Wire, 8, 18, BQ25896_SLAVE_ADDRESS)) {

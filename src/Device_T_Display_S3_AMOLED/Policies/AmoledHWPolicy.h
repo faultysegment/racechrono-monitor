@@ -109,6 +109,10 @@ public:
         esp_deep_sleep_start();
     }
 
+    static void reboot() {
+        ESP.restart();
+    }
+
     static void initBattery() {}
 
     static int getBatteryPercent() {

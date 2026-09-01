@@ -7,6 +7,7 @@ struct MockHWPolicy {
     static bool powerKeyPressed;
     static bool actionKeyPressed;
     static bool sleepCalled;
+    static bool rebootCalled;
 
     static int navigationDelta;
     static int batteryPercent;
@@ -16,6 +17,7 @@ struct MockHWPolicy {
         powerKeyPressed = false;
         actionKeyPressed = false;
         sleepCalled = false;
+        rebootCalled = false;
         navigationDelta = 0;
         batteryPercent = 100;
     }
@@ -42,6 +44,10 @@ struct MockHWPolicy {
         sleepCalled = true;
     }
 
+    static void reboot() {
+        rebootCalled = true;
+    }
+
     static void initBattery() {}
     static int getBatteryPercent() { return batteryPercent; }
 
@@ -66,6 +72,7 @@ uint32_t MockHWPolicy::currentMillis = 0;
 bool MockHWPolicy::powerKeyPressed = false;
 bool MockHWPolicy::actionKeyPressed = false;
 bool MockHWPolicy::sleepCalled = false;
+bool MockHWPolicy::rebootCalled = false;
 int MockHWPolicy::navigationDelta = 0;
 int MockHWPolicy::batteryPercent = 100;
 #endif

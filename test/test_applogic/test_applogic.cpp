@@ -296,6 +296,49 @@ void test_applogic_reconfigure_on_indication_toggle(void) {
     TEST_ASSERT_TRUE(MockBLEPolicy::sentConfigCommands.size() > initialCount);
 }
 
+void test_applogic_json_webui_config(void) {
+    setUp();
+    MockStoragePolicy::reset();
+    MockStoragePolicy::configFileContent = R"json({
+        "isHud": false,
+        "webui": {
+            "enabled": true,
+            "ssid": "Test-AP",
+            "password": "secretpassword"
+        },
+        "monitors": [
+            { "id": "m1", "title": "TIME", "formula": "1", "multiplier": 1.0, "decimals": 2, "limit": 0.5 }
+        ]
+    })json";
+
+    logic.setup();
+    TEST_ASSERT_TRUE(state.webuiConfig.enabled);
+    TEST_ASSERT_EQUAL_STRING("Test-AP", state.webuiConfig.ssid);
+    TEST_ASSERT_EQUAL_STRING("secretpassword", state.webuiConfig.password);
+}
+
+void test_applogic_config_mode_events(void) {
+    setUp();
+    logic.setup();
+    TEST_ASSERT_FALSE(state.isConfiguring);
+
+    // Enter config mode
+    logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
+    TEST_ASSERT_TRUE(state.isConfiguring);
+
+    // Exit config mode
+    logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_EXIT, 0, 0, 0});
+    TEST_ASSERT_FALSE(state.isConfiguring);
+
+    // Enter config mode again
+    logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
+    TEST_ASSERT_TRUE(state.isConfiguring);
+
+    // Config reload exits config mode
+    logic.processEvent(Event{EventType::EVENT_CONFIG_RELOAD, 0, 0, 0});
+    TEST_ASSERT_FALSE(state.isConfiguring);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -310,6 +353,8 @@ void setup() {
     RUN_TEST(test_applogic_json_config_auto_create);
     RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
     RUN_TEST(test_applogic_reconfigure_on_indication_toggle);
+    RUN_TEST(test_applogic_json_webui_config);
+    RUN_TEST(test_applogic_config_mode_events);
     UNITY_END();
 }
 void loop() {}
@@ -326,6 +371,8 @@ int main(int argc, char **argv) {
     RUN_TEST(test_applogic_json_config_auto_create);
     RUN_TEST(test_applogic_reconfigure_on_cmd_type_update_all);
     RUN_TEST(test_applogic_reconfigure_on_indication_toggle);
+    RUN_TEST(test_applogic_json_webui_config);
+    RUN_TEST(test_applogic_config_mode_events);
     UNITY_END();
     return 0;
 }

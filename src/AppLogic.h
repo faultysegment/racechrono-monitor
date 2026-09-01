@@ -188,6 +188,26 @@ public:
                 }
                 break;
 
+            case EventType::EVENT_CONFIG_MODE_ENTER:
+                state.isConfiguring = true;
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                break;
+
+            case EventType::EVENT_CONFIG_MODE_EXIT:
+                state.isConfiguring = false;
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                break;
+
+            case EventType::EVENT_CONFIG_RELOAD:
+                loadConfig();
+                state.isConfiguring = false;
+                bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
+                break;
+
+            case EventType::EVENT_DEVICE_REBOOT:
+                HWPolicy::reboot();
+                break;
+
             default:
                 break;
         }
@@ -253,6 +273,7 @@ public:
         state.isHud = false;
         state.clearMonitorConfigs();
         state.clearScreenConfigs();
+        state.webuiConfig = WebUIConfig();
 
         MonitorConfig timeCfg;
         strncpy(timeCfg.id, "lap_delta", sizeof(timeCfg.id));
@@ -309,6 +330,19 @@ public:
         state.isHud = doc["isHud"] | false;
         state.clearMonitorConfigs();
         state.clearScreenConfigs();
+
+        if (doc["webui"].is<JsonObject>()) {
+            JsonObject w = doc["webui"];
+            state.webuiConfig.enabled = w["enabled"] | false;
+            const char* ssid = w["ssid"] | "";
+            const char* pass = w["password"] | "";
+            strncpy(state.webuiConfig.ssid, ssid, sizeof(state.webuiConfig.ssid) - 1);
+            state.webuiConfig.ssid[sizeof(state.webuiConfig.ssid) - 1] = '\0';
+            strncpy(state.webuiConfig.password, pass, sizeof(state.webuiConfig.password) - 1);
+            state.webuiConfig.password[sizeof(state.webuiConfig.password) - 1] = '\0';
+        } else {
+            state.webuiConfig = WebUIConfig();
+        }
 
         JsonArray monitors = doc["monitors"];
         if (monitors.isNull() || monitors.size() == 0) {
