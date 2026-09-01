@@ -33,13 +33,7 @@ public:
         }
 
         gfx->begin();
-        gfx->fillScreen(0x0000);
-
-        for (int i = 0; i <= 255; i += 5) {
-            gfx->Display_Brightness((uint8_t)i);
-            delay(2);
-        }
-        gfx->Display_Brightness(255);
+        gfx->displayOn();
 
         if (!canvas) {
             canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
@@ -115,7 +109,13 @@ public:
         digitalWrite(LCD_EN, on ? HIGH : LOW);
 #endif
         Arduino_GFX* gfx = getGfx();
-        if (gfx) gfx->Display_Brightness(on ? 255 : 0);
+        if (gfx) {
+            if (on) {
+                gfx->displayOn();
+            } else {
+                gfx->displayOff();
+            }
+        }
     }
 
     void drawBattery(int percent, bool force = false) {
