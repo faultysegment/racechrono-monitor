@@ -14,7 +14,7 @@ public:
         int cx = tft.width() / 2;
         int cy = tft.height() / 2;
         int radiusOut = std::min(cx, cy) - 5;
-        int radiusIn = radiusOut - ui.h(0.025f);
+        int radiusIn = radiusOut - std::max(4, (int)(radiusOut * 0.05f));
         tft.fillCircle(cx, cy, radiusOut, 0xF800);
         tft.fillCircle(cx, cy, radiusIn, 0x0000);
         

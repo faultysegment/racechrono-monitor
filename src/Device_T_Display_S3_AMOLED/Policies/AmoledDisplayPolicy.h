@@ -8,12 +8,15 @@ class AmoledDisplayPolicy {
 private:
     static Arduino_DataBus*& getBus() { static Arduino_DataBus* bus = nullptr; return bus; }
     static Arduino_GFX*& getGfx() { static Arduino_GFX* gfx = nullptr; return gfx; }
+    static Arduino_Canvas*& getCanvas() { static Arduino_Canvas* canvas = nullptr; return canvas; }
     static bool& getHudMode() { static bool hud = false; return hud; }
+    static bool& getDirty() { static bool dirty = false; return dirty; }
 
 public:
     void init() {
         Arduino_DataBus*& bus = getBus();
         Arduino_GFX*& gfx = getGfx();
+        Arduino_Canvas*& canvas = getCanvas();
 
         if (!bus) {
             bus = new Arduino_ESP32QSPI(
@@ -33,12 +36,21 @@ public:
         delay(50);
 #endif
 
-        gfx->begin();
+        gfx->begin(80000000);
+
+        if (!canvas) {
+            canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
+            canvas->begin(GFX_SKIP_OUTPUT_BEGIN);
+            canvas->fillScreen(0x0000);
+            getDirty() = true;
+            canvas->flush();
+            getDirty() = false;
+        }
     }
 
     void setRotation(uint8_t r) {
-        Arduino_GFX* gfx = getGfx();
-        if (gfx) gfx->setRotation(r);
+        Arduino_Canvas* canvas = getCanvas();
+        if (canvas) canvas->setRotation(r);
     }
 
     void setHudMode(bool hud) {
@@ -54,42 +66,45 @@ public:
         }
     }
 
-    void fillScreen(uint32_t color) { if (getGfx()) getGfx()->fillScreen(color); }
-    void setCursor(int16_t x, int16_t y) { if (getGfx()) getGfx()->setCursor(x, y); }
-    void setTextWrap(bool wrap) { if (getGfx()) getGfx()->setTextWrap(wrap); }
-    void setTextSize(uint8_t size) { if (getGfx()) getGfx()->setTextSize(size); }
-    void setTextColor(uint32_t c) { if (getGfx()) getGfx()->setTextColor(c); }
-    void setTextColor(uint32_t c, uint32_t bg) { if (getGfx()) getGfx()->setTextColor(c, bg); }
-    void print(const char* str) { if (getGfx()) getGfx()->print(str); }
-    void print(int n) { if (getGfx()) getGfx()->print(n); }
-    void println(const char* str) { if (getGfx()) getGfx()->println(str); }
+    void fillScreen(uint32_t color) { if (getCanvas()) { getCanvas()->fillScreen(color); getDirty() = true; } }
+    void setCursor(int16_t x, int16_t y) { if (getCanvas()) getCanvas()->setCursor(x, y); }
+    void setTextWrap(bool wrap) { if (getCanvas()) getCanvas()->setTextWrap(wrap); }
+    void setTextSize(uint8_t size) { if (getCanvas()) getCanvas()->setTextSize(size); }
+    void setTextColor(uint32_t c) { if (getCanvas()) getCanvas()->setTextColor(c); }
+    void setTextColor(uint32_t c, uint32_t bg) { if (getCanvas()) getCanvas()->setTextColor(c, bg); }
+    void print(const char* str) { if (getCanvas()) { getCanvas()->print(str); getDirty() = true; } }
+    void print(int n) { if (getCanvas()) { getCanvas()->print(n); getDirty() = true; } }
+    void println(const char* str) { if (getCanvas()) { getCanvas()->println(str); getDirty() = true; } }
 
     int16_t textWidth(const char* str) {
-        Arduino_GFX* gfx = getGfx();
-        if (!gfx) return 0;
+        Arduino_Canvas* canvas = getCanvas();
+        if (!canvas) return 0;
         int16_t x1, y1;
         uint16_t w, h;
-        gfx->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
+        canvas->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
         return w;
     }
 
-    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { if (getGfx()) getGfx()->fillRect(x, y, w, h, color); }
-    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { if (getGfx()) getGfx()->fillCircle(x, y, r, color); }
-    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { if (getGfx()) getGfx()->drawFastHLine(x, y, w, color); }
-    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) { if (getGfx()) getGfx()->drawFastVLine(x, y, h, color); }
+    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { if (getCanvas()) { getCanvas()->fillRect(x, y, w, h, color); getDirty() = true; } }
+    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { if (getCanvas()) { getCanvas()->fillCircle(x, y, r, color); getDirty() = true; } }
+    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { if (getCanvas()) { getCanvas()->drawFastHLine(x, y, w, color); getDirty() = true; } }
+    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) { if (getCanvas()) { getCanvas()->drawFastVLine(x, y, h, color); getDirty() = true; } }
 
     int16_t width() {
-        Arduino_GFX* gfx = getGfx();
-        return gfx ? gfx->width() : LCD_WIDTH;
+        Arduino_Canvas* canvas = getCanvas();
+        return canvas ? canvas->width() : LCD_WIDTH;
     }
 
     int16_t height() {
-        Arduino_GFX* gfx = getGfx();
-        return gfx ? gfx->height() : LCD_HEIGHT;
+        Arduino_Canvas* canvas = getCanvas();
+        return canvas ? canvas->height() : LCD_HEIGHT;
     }
 
     void flush() {
-        // Direct drawing to gfx hardware QSPI bus, no full-framebuffer copy needed
+        if (!getDirty()) return;
+        getDirty() = false;
+        Arduino_Canvas* canvas = getCanvas();
+        if (canvas) canvas->flush();
     }
 
     void setBacklight(bool on) {
