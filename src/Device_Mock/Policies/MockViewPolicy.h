@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "AppState.h"
 #include "View.h"
 #include "Screens/MonitorScreen.h"
@@ -8,7 +8,7 @@
 #include "Screens/ConfiguringScreen.h"
 
 template <typename DisplayPolicy>
-class NativeViewPolicy {
+class MockViewPolicy {
     MonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
     CircularMonitorScreen<DisplayPolicy> circScreens[MAX_SCREENS];
     DualMonitorScreen<DisplayPolicy> dualScreens[MAX_SCREENS];
@@ -16,7 +16,7 @@ class NativeViewPolicy {
     ConfiguringScreen<DisplayPolicy> configuringScreen;
 
 public:
-    NativeViewPolicy(AppState& state) {}
+    MockViewPolicy(AppState& state) {}
 
     template <typename HWPolicy>
     void setupScreens(View<DisplayPolicy, HWPolicy>& appView, AppState& state) {

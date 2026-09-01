@@ -18,12 +18,12 @@ We employ a highly decoupled **Event-Driven Architecture** utilizing a central `
 To prevent `#ifdef` spaghetti, implementations are cleanly separated into dedicated folders inside `src/`:
 
 - **`Device_All/`**: Shared interfaces or structures (e.g., `EventBus.h`).
-- **`Device_T_Embed_CC1101/`**: Real ESP32 firmware implementation.
+- **`Device_T_Embed_CC1101/`**: LilyGO T-Embed firmware implementation (TFT_eSPI, encoder, battery management).
+- **`Device_T_Display_S3_AMOLED/`**: LilyGO T-Display-S3 AMOLED firmware implementation (Arduino_GFX, circular display, touch/buttons).
 - **`Device_Mock/`**: Pure software mocks utilized purely for native unit testing.
-- **`Device_Native/`**: A full PC Simulator using SDL2.
 
-### Single `main.cpp` per Device
-Each device folder contains an `App.h` and `main.cpp`. The `main.cpp` is responsible for setting up the environment. For ESP32, it creates FreeRTOS tasks (`uiTask`, `inputTask`, `logicTask`) which push/pop events from the `EventBus`.
+### Device Entrypoints
+Each device folder contains its own policies and `main.cpp`. The `main.cpp` sets up the environment and creates FreeRTOS tasks (`uiTask`, `inputTask`, `logicTask`, `webTask`) that push/pop events from the `EventBus`.
 
 ## 3. Abstract Hardware Terminology
 
@@ -31,27 +31,17 @@ Core logic must remain agnostic to the physical form-factor of the device.
 - Use generic terms: `Action Key`, `Power Key`, `Navigation Delta`.
 - **DO NOT** use device-specific terms in core code: e.g., avoid `Encoder Button` or `Encoder Turns` in Event definitions.
 
-## 4. Testing & Simulators
+## 4. Testing Strategy
 
-This project prioritizes high-speed iteration loops without requiring physical hardware flashing.
+This project prioritizes high-speed iteration loops without requiring physical hardware flashing for core logic validation.
 
 ### Unit Tests (`env:unit_tests`)
 - We run unit tests natively on the PC using PlatformIO's `unity` framework.
 - Command: `pio test -e unit_tests`
-- Tests run instantly because they use `MockHWPolicy`, `MockDisplayPolicy`, etc., from `Device_Mock`.
-
-### Interactive Integration Test / PC Simulator (`env:run_simulator`)
-- We maintain a fully interactive SDL2-based PC Simulator.
-- It uses the exact same core `AppState`, `View`, and `AppLogic` logic, acting as an interactive integration test.
-- Command: `pio run -e run_simulator`
-- **Native Build Rules**: 
-  - The native build is completely cross-platform.
-  - Do not hardcode OS-specific paths (like MSYS2 Windows paths) in `platformio.ini`. 
-  - Instead, the `sdl2_build.py` script automatically manages include and library paths for Windows (MSYS2), macOS (Homebrew), and Linux (`pkg-config`).
+- Tests run instantly because they use `MockHWPolicy`, `MockDisplayPolicy`, `MockViewPolicy`, `MockBLEPolicy`, `MockStoragePolicy`, and `MockWebConfigPolicy` from `Device_Mock`.
 
 ## 5. UI and Screen Layout
 Screens are abstracted via the `IScreen<DisplayPolicy>` interface. 
 When creating new UI states:
-- Create a new screen class in the relevant device folders.
-- Ensure the screen implementation dynamically scales or respects bounds, preventing overlapping text.
-- Use `TTF_RenderText_Shaded` in SDL2 mocks or space-padding to prevent overlapping artifact text when refreshing screens (simulating `TFT_eSPI` behavior).
+- Create or extend screen classes in `src/Screens/` or device-specific folders.
+- Ensure screen implementations dynamically scale or respect display bounds, preventing overlapping text or clipping.

@@ -7,7 +7,7 @@
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Mock/Policies/MockBLEPolicy.h"
 #include "../../src/Device_Mock/Policies/MockStoragePolicy.h"
-#include "../../src/Device_Native/Policies/NativeViewPolicy.h"
+#include "../../src/Device_Mock/Policies/MockViewPolicy.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -15,7 +15,7 @@
 AppState state;
 View<MockDisplayPolicy, MockHWPolicy> view(state);
 
-NativeViewPolicy<MockDisplayPolicy> viewPolicy(state);
+MockViewPolicy<MockDisplayPolicy> viewPolicy(state);
 using TestAppLogic = AppLogic<MockBLEPolicy, MockHWPolicy, MockStoragePolicy>;
 
 EventBus testBus;

@@ -3,7 +3,7 @@
 #include "View.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
-#include "../../src/Device_Native/Policies/NativeViewPolicy.h"
+#include "../../src/Device_Mock/Policies/MockViewPolicy.h"
 #ifdef ARDUINO
 #include <Arduino.h>
 #endif
@@ -11,7 +11,7 @@
 AppState state;
 View<MockDisplayPolicy, MockHWPolicy> view(state);
 
-NativeViewPolicy<MockDisplayPolicy> viewPolicy(state);
+MockViewPolicy<MockDisplayPolicy> viewPolicy(state);
 
 void setUp(void) {
     state.reset();
@@ -111,7 +111,7 @@ void test_screen_registration(void) {
     state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}});
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
-    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
     TEST_ASSERT_EQUAL(5, mockView.getNumConnectedScreens());
@@ -124,7 +124,7 @@ void test_screen_registration_single_monitor(void) {
     state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
-    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
     TEST_ASSERT_EQUAL(2, mockView.getNumConnectedScreens()); // circ0 + rect0
@@ -138,7 +138,7 @@ void test_view_custom_screen_composition(void) {
     state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}}); // single: SPEED (idx 1)
 
     View<MockDisplayPolicy, MockHWPolicy> mockView(state);
-    NativeViewPolicy<MockDisplayPolicy> policy(state);
+    MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
     TEST_ASSERT_EQUAL(3, mockView.getNumConnectedScreens()); // dual + circ1 + rect1
