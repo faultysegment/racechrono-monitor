@@ -23,10 +23,12 @@ public:
                 LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
         }
         if (!gfx) {
-#if defined DO0143FAT01
+#if defined H0175Y003AM
+            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 0, 0, 0, 0);
+#elif defined DO0143FAT01
             gfx = new Arduino_SH8601(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
-#elif (defined DO0143FMST10) || (defined H0175Y003AM)
-            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 6, 0, 0, 0);
+#elif defined DO0143FMST10
+            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 0, 0, 0, 0);
 #endif
         }
 
@@ -38,11 +40,7 @@ public:
 
         gfx->begin(80000000);
         gfx->fillScreen(0x0000);
-
-        for (uint8_t i = 0; i < 255; i++) {
-            gfx->Display_Brightness(i);
-            delay(1);
-        }
+        gfx->Display_Brightness(0x00);
 
         if (!canvas) {
             canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
@@ -118,7 +116,7 @@ public:
         digitalWrite(LCD_EN, on ? HIGH : LOW);
 #endif
         Arduino_GFX* gfx = getGfx();
-        if (gfx) gfx->Display_Brightness(on ? 255 : 0);
+        if (gfx) gfx->Display_Brightness(on ? 0x00 : 0xFF);
     }
 
     void drawBattery(int percent, bool force = false) {
