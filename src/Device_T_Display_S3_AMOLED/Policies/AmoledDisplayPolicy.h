@@ -23,13 +23,8 @@ public:
                 LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
         }
         if (!gfx) {
-#if defined H0175Y003AM
-            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 0, 0, 0, 0);
-#elif defined DO0143FAT01
+            // 1.75" / 1.43" Circular AMOLED (SH8601, 466x466)
             gfx = new Arduino_SH8601(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
-#elif defined DO0143FMST10
-            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 0, 0, 0, 0);
-#endif
         }
 
 #if defined(LCD_EN)
