@@ -48,7 +48,7 @@ public:
 
         tft.setBacklight(true);
 
-        tft.fillScreen(0x001F); // TFT_BLUE
+        tft.fillScreen(0x0000); // TFT_BLACK
         tft.setCursor(0, 0);
         tft.setTextWrap(false);
         tft.setTextSize(2);

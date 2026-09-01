@@ -67,17 +67,18 @@ public:
         float pct = (limit > 0.0001f) ? (absVal / limit) : 0.0f;
         if (pct > 1.0f) pct = 1.0f;
 
-        int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
+        const int maxThickness = std::max(12, (int)std::round(radiusOut * 0.15f));
+        const int minThickness = 4;
 
-        // Always draw outer background ring boundary at 0%
         if (pct <= 0.001f) {
             tft.fillCircle(cx, cy, radiusOut, bgColor);
-            tft.fillCircle(cx, cy, radiusOut - 4, 0x0000);
+            tft.fillCircle(cx, cy, radiusOut - minThickness, 0x0000);
         } else {
             if (pct < 0.10f) {
                 pct = 0.10f;
             }
-            int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
+            int currentThickness = minThickness + (int)std::round((maxThickness - minThickness) * pct);
+            int rIn = radiusOut - currentThickness;
             // Fill from outer edge (radiusOut) inward to rIn
             tft.fillCircle(cx, cy, radiusOut, filledColor);
             if (rIn > 0) {

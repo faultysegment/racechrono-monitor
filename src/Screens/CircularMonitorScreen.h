@@ -41,7 +41,7 @@ public:
         if (mIdx < 0 || state.nextMonitorId <= mIdx) {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, 1.0f, 0x0000, 0x7BEF);
-            ui.textCenter("WAIT", 0xFFFF, 0.15f, 0.5f);
+            ui.textCenter("WAIT", 0xFFFF, 0.15f, 0.5f, 0x0000);
             return;
         }
 
@@ -51,8 +51,8 @@ public:
         if (state.monitors[mIdx].hasException) {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
-            ui.textCenter("ERR", 0xF800, 0.3f, 0.5f);
+            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f, 0x0000);
+            ui.textCenter("ERR", 0xF800, 0.3f, 0.5f, 0x0000);
             return;
         }
 
@@ -81,22 +81,14 @@ public:
                     snprintf(valBuf, sizeof(valBuf), "%+.1f", val);
                 }
 
-                int cx = tft.width() / 2;
-                int cy = tft.height() / 2;
-                int radiusOut = std::min(cx, cy) - 5;
-                float absVal = std::abs(val);
-                if (absVal > currentLimit) absVal = currentLimit;
-                float pct = (currentLimit > 0.0001f) ? (absVal / currentLimit) : 0.0f;
-                int rIn = (int)std::round((float)radiusOut * (1.0f - pct));
-
-                ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
-                ui.textCenter(valBuf, mSlot.valueColor, 0.25f, 0.5f);
+                ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f, 0x0000);
+                ui.textCenter(valBuf, mSlot.valueColor, 0.25f, 0.5f, 0x0000);
             }
         } else {
             tft.fillScreen(0x0000);
             ui.circularRadialBar(0, currentLimit, 0x0000, 0x7BEF);
-            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f);
-            ui.textCenter("---", 0xFFFF, 0.3f, 0.5f);
+            ui.textCenter(state.monitors[mIdx].title, mSlot.titleColor, 0.1f, 0.25f, 0x0000);
+            ui.textCenter("---", 0xFFFF, 0.3f, 0.5f, 0x0000);
         }
     }
 };

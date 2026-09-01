@@ -188,7 +188,9 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
     if (MockDisplayPolicy::lastCircles.size() >= 2) {
         int radiusOut = MockDisplayPolicy::lastCircles[0].r;
         int rIn = MockDisplayPolicy::lastCircles[1].r;
-        int expectedRin = (int)std::round((float)radiusOut * 0.90f);
+        int maxThickness = std::max(12, (int)std::round((float)radiusOut * 0.15f));
+        int minThickness = 4;
+        int expectedRin = radiusOut - (minThickness + (int)std::round((float)(maxThickness - minThickness) * 0.10f));
         TEST_ASSERT_EQUAL(expectedRin, rIn);
     }
 }
