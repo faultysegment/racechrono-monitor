@@ -37,6 +37,12 @@ public:
 #endif
 
         gfx->begin(80000000);
+        gfx->fillScreen(0x0000);
+
+        for (uint8_t i = 0; i < 255; i++) {
+            gfx->Display_Brightness(i);
+            delay(1);
+        }
 
         if (!canvas) {
             canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
