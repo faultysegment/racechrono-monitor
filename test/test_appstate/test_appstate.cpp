@@ -134,6 +134,25 @@ void test_color_utils_hex_parsing(void) {
     TEST_ASSERT_EQUAL_HEX16(0x1234, ColorUtils::parseHexColor565("invalid", 0x1234));
 }
 
+void test_appstate_webui_config(void) {
+    AppState s;
+    s.reset();
+    TEST_ASSERT_FALSE(s.webuiConfig.enabled);
+    TEST_ASSERT_EQUAL_STRING("", s.webuiConfig.ssid);
+    TEST_ASSERT_EQUAL_STRING("", s.webuiConfig.password);
+    TEST_ASSERT_FALSE(s.isConfiguring);
+
+    s.webuiConfig.enabled = true;
+    strncpy(s.webuiConfig.ssid, "MyAP", sizeof(s.webuiConfig.ssid));
+    strncpy(s.webuiConfig.password, "12345678", sizeof(s.webuiConfig.password));
+    s.isConfiguring = true;
+
+    TEST_ASSERT_TRUE(s.webuiConfig.enabled);
+    TEST_ASSERT_EQUAL_STRING("MyAP", s.webuiConfig.ssid);
+    TEST_ASSERT_EQUAL_STRING("12345678", s.webuiConfig.password);
+    TEST_ASSERT_TRUE(s.isConfiguring);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -145,6 +164,7 @@ void setup() {
     RUN_TEST(test_appstate_monitor_configs);
     RUN_TEST(test_appstate_screen_configs);
     RUN_TEST(test_color_utils_hex_parsing);
+    RUN_TEST(test_appstate_webui_config);
     UNITY_END();
 }
 void loop() {}
@@ -158,6 +178,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_appstate_monitor_configs);
     RUN_TEST(test_appstate_screen_configs);
     RUN_TEST(test_color_utils_hex_parsing);
+    RUN_TEST(test_appstate_webui_config);
     UNITY_END();
     return 0;
 }

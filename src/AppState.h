@@ -40,6 +40,17 @@ struct ScreenConfig {
     ScreenSlotConfig secondary;
 };
 
+struct WebUIConfig {
+    bool enabled;
+    char ssid[32];
+    char password[64];
+
+    WebUIConfig() : enabled(false) {
+        ssid[0] = '\0';
+        password[0] = '\0';
+    }
+};
+
 class AppState {
 public:
     static const int32_t INVALID_VALUE = 2147483647;
@@ -64,6 +75,8 @@ public:
 
     ScreenConfig screenConfigs[MAX_SCREENS];
     int numScreenConfigs;
+
+    WebUIConfig webuiConfig;
 
     bool isHud;
 
@@ -100,6 +113,7 @@ public:
         isConfiguring = false;
         isConfigured = false;
         currentScreenIndex = 0;
+        webuiConfig = WebUIConfig();
         resetMonitors();
     }
 
