@@ -25,16 +25,17 @@ public:
     }
 
     int textSize(float percent) {
-        int targetPixels = tft.height() * percent;
-        return std::max(1, (int)std::round((float)targetPixels / getBaseTextHeight()));
+        int targetPixels = (int)(tft.height() * percent);
+        return std::max(1, targetPixels / 8);
     }
 
     void textCenter(const char* str, uint32_t color, float sizePercent, float offsetYPercent = 0.5f) {
+        int sz = textSize(sizePercent);
+        tft.setTextSize(sz);
         tft.setTextColor(color);
-        tft.setTextSize(textSize(sizePercent));
         
-        int strW = tft.textWidth(str);
-        int strH = getBaseTextHeight() * textSize(sizePercent);
+        int strW = strlen(str) * 6 * sz;
+        int strH = 8 * sz;
         
         int cursorX = (tft.width() - strW) / 2;
         int cursorY = h(offsetYPercent) - (strH / 2);
@@ -44,15 +45,16 @@ public:
     }
 
     void textCenter(const char* str, uint32_t color, float sizePercent, float offsetYPercent, uint32_t bg) {
-        tft.setTextColor(color, bg);
-        tft.setTextSize(textSize(sizePercent));
-        
-        int strW = tft.textWidth(str);
-        int strH = getBaseTextHeight() * textSize(sizePercent);
+        int sz = textSize(sizePercent);
+        int strW = strlen(str) * 6 * sz;
+        int strH = 8 * sz;
         
         int cursorX = (tft.width() - strW) / 2;
         int cursorY = h(offsetYPercent) - (strH / 2);
         
+        tft.fillRect(cursorX, cursorY, strW, strH, bg);
+        tft.setTextSize(sz);
+        tft.setTextColor(color);
         tft.setCursor(cursorX, cursorY);
         tft.print(str);
     }

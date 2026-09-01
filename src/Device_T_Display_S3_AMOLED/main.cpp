@@ -52,14 +52,11 @@ void webTask(void* pvParameters) {
 void setup() {
     app.setup();
 
-    // Pin Input to Core 0 (PRO_CPU) for dedicated high-priority touch polling
-    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 5, NULL, 0);
+    app.getEventBus().push(Event{EventType::UI_UPDATE, 0, 0, 0});
 
-    // Pin UI Rendering to Core 1 (APP_CPU) for dedicated display rendering
-    xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 1, NULL, 1);
-
-    // Pin Logic and WebUI to Core 0 (PRO_CPU)
+    xTaskCreatePinnedToCore(uiTask, "UI_Task", 8192, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(logicTask, "Logic_Task", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(inputTask, "Input_Task", 4096, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(webTask, "Web_Task", 4096, NULL, 1, NULL, 0);
 }
 

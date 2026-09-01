@@ -6,7 +6,10 @@ class RealDisplayPolicy {
     TFT_eSPI tft;
     bool isHudMode = false;
 public:
-    void init() { tft.init(); }
+    void init() {
+        tft.init();
+        tft.setRotation(3);
+    }
     void setRotation(uint8_t r) { tft.setRotation(r); }
     void setHudMode(bool hud) {
         if (isHudMode != hud) {

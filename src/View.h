@@ -44,14 +44,6 @@ public:
     
     void init() {
         tft.init();
-        tft.setRotation(3);
-
-        tft.setBacklight(true);
-
-        tft.fillScreen(0x0000); // TFT_BLACK
-        tft.setCursor(0, 0);
-        tft.setTextWrap(false);
-        tft.setTextSize(2);
     }
     
     void processEvent(const Event& e) {
@@ -62,12 +54,12 @@ public:
                 }
                 break;
             case EventType::UI_SHOW_CONNECTED:
-                displayStarted = false; 
-                showMessage("BLE connected!", 0x001F, 0x0000); 
+                showMessage("BLE connected!", 0x07E0, 0x0000);
+                displayStarted = false;
                 break;
             case EventType::UI_SHOW_DISCONNECTED:
-                displayStarted = false; 
-                showMessage("Disconnected", 0xF800, 0x0000); 
+                showMessage("Disconnected", 0xF800, 0x0000);
+                displayStarted = false;
                 break;
             case EventType::UI_SHOW_CONFIGURING:
             case EventType::UI_SHOW_CONFIG_DONE:
@@ -132,7 +124,7 @@ private:
     void showMessage(const char* msg, uint32_t color = 0xFFFF, uint32_t bg = 0x0000) {
         tft.fillScreen(bg);
         tft.setCursor(0, 0);
-        tft.setTextColor(color, bg);
+        tft.setTextColor(color);
         tft.println(msg);
     }
     AppState& state;

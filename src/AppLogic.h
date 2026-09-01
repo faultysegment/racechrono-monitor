@@ -37,8 +37,6 @@ public:
     }
     
     void setup() {
-        HWPolicy::initBoard();
-
         StoragePolicy::init();
         loadConfig();
         restoreDisconnectedScreen();

@@ -4,138 +4,81 @@
 #include <Arduino_GFX_Library.h>
 #include "pin_config.h"
 
-class AmoledDisplayPolicy {
-private:
-    static Arduino_DataBus*& getBus() { static Arduino_DataBus* bus = nullptr; return bus; }
-    static Arduino_GFX*& getGfx() { static Arduino_GFX* gfx = nullptr; return gfx; }
-    static Arduino_Canvas*& getCanvas() { static Arduino_Canvas* canvas = nullptr; return canvas; }
-    static bool& getHudMode() { static bool hud = false; return hud; }
-    static bool& getDirty() { static bool dirty = false; return dirty; }
+extern Arduino_DataBus *g_amoled_bus;
+extern Arduino_GFX *g_amoled_gfx;
 
+class AmoledDisplayPolicy {
 public:
     void init() {
-        Arduino_DataBus*& bus = getBus();
-        Arduino_GFX*& gfx = getGfx();
-        Arduino_Canvas*& canvas = getCanvas();
-
-#if defined(LCD_EN)
-        pinMode(LCD_EN, OUTPUT);
-        digitalWrite(LCD_EN, HIGH);
-        delay(50);
-#endif
-
-        if (!bus) {
-            bus = new Arduino_ESP32QSPI(
+        if (!g_amoled_bus) {
+            g_amoled_bus = new Arduino_ESP32QSPI(
                 LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
         }
-        if (!gfx) {
-#if defined DO0143FAT01
-            gfx = new Arduino_SH8601(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
-#elif (defined DO0143FMST10) || (defined H0175Y003AM)
-            gfx = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 6, 0, 0, 0);
+        if (!g_amoled_gfx) {
+#if defined(DO0143FAT01)
+            g_amoled_gfx = new Arduino_SH8601(g_amoled_bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
+#elif defined(H0175Y003AM) || defined(DO0143FMST10)
+            g_amoled_gfx = new Arduino_CO5300(g_amoled_bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT, 6, 0, 0, 0);
 #endif
         }
 
-        gfx->begin();
-        gfx->fillScreen(0x0000);
+        pinMode(LCD_EN, OUTPUT);
+        digitalWrite(LCD_EN, HIGH);
 
-        for (int i = 0; i <= 255; i++) {
-            gfx->Display_Brightness(i);
+        g_amoled_gfx->begin();
+        g_amoled_gfx->fillScreen(0x0000);
+
+        for (int i = 0; i <= 200; i++) {
+            g_amoled_gfx->Display_Brightness(i);
             delay(2);
         }
-
-        if (!canvas) {
-            canvas = new Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, gfx);
-            canvas->begin(GFX_SKIP_OUTPUT_BEGIN);
-            canvas->fillScreen(0x0000);
-            getDirty() = true;
-            canvas->flush();
-            getDirty() = false;
-        }
     }
 
-    void setRotation(uint8_t r) {
-        Arduino_Canvas* canvas = getCanvas();
-        if (canvas) canvas->setRotation(0);
-    }
-
+    void setRotation(uint8_t r) {}
     void setHudMode(bool hud) {
-        bool& currentHud = getHudMode();
-        if (currentHud != hud) {
-            currentHud = hud;
-            Arduino_DataBus* bus = getBus();
-            if (bus) {
-                bus->beginWrite();
-                bus->writeC8D8(0x36, hud ? 0x02 : 0x00);
-                bus->endWrite();
-            }
+        static bool currentHud = false;
+        if (currentHud == hud) return;
+        currentHud = hud;
+
+        if (g_amoled_bus) {
+            g_amoled_bus->beginWrite();
+            g_amoled_bus->writeC8D8(0x36, hud ? 0x02 : 0x00);
+            g_amoled_bus->endWrite();
         }
     }
 
-    void fillScreen(uint32_t color) { if (getCanvas()) { getCanvas()->fillScreen(color); getDirty() = true; } }
-    void setCursor(int16_t x, int16_t y) { if (getCanvas()) getCanvas()->setCursor(x, y); }
-    void setTextWrap(bool wrap) { if (getCanvas()) getCanvas()->setTextWrap(wrap); }
-    void setTextSize(uint8_t size) { if (getCanvas()) getCanvas()->setTextSize(size); }
-    void setTextColor(uint32_t c) { if (getCanvas()) getCanvas()->setTextColor(c); }
-    void setTextColor(uint32_t c, uint32_t bg) { if (getCanvas()) getCanvas()->setTextColor(c, bg); }
-    void print(const char* str) { if (getCanvas()) { getCanvas()->print(str); getDirty() = true; } }
-    void print(int n) { if (getCanvas()) { getCanvas()->print(n); getDirty() = true; } }
-    void println(const char* str) { if (getCanvas()) { getCanvas()->println(str); getDirty() = true; } }
+    void fillScreen(uint16_t color) { if (g_amoled_gfx) g_amoled_gfx->fillScreen(color); }
+    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) { if (g_amoled_gfx) g_amoled_gfx->fillRect(x, y, w, h, color); }
+    void setCursor(int16_t x, int16_t y) { if (g_amoled_gfx) g_amoled_gfx->setCursor(x, y); }
+    void setTextColor(uint16_t c) { if (g_amoled_gfx) g_amoled_gfx->setTextColor(c); }
+    void setTextColor(uint16_t c, uint16_t bg) { if (g_amoled_gfx) g_amoled_gfx->setTextColor(c, bg); }
+    void setTextSize(uint8_t s) { if (g_amoled_gfx) g_amoled_gfx->setTextSize(s); }
+    void setTextWrap(bool w) { if (g_amoled_gfx) g_amoled_gfx->setTextWrap(w); }
+    size_t print(const char* str) { return g_amoled_gfx ? g_amoled_gfx->print(str) : 0; }
+    size_t print(int n) { return g_amoled_gfx ? g_amoled_gfx->print(n) : 0; }
+    size_t println(const char* str) { return g_amoled_gfx ? g_amoled_gfx->println(str) : 0; }
 
     int16_t textWidth(const char* str) {
-        Arduino_Canvas* canvas = getCanvas();
-        if (!canvas) return 0;
+        if (!g_amoled_gfx) return 0;
         int16_t x1, y1;
         uint16_t w, h;
-        canvas->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
+        g_amoled_gfx->getTextBounds(str, 0, 0, &x1, &y1, &w, &h);
         return w;
     }
 
-    void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color) { if (getCanvas()) { getCanvas()->fillRect(x, y, w, h, color); getDirty() = true; } }
-    void fillCircle(int16_t x, int16_t y, int16_t r, uint32_t color) { if (getCanvas()) { getCanvas()->fillCircle(x, y, r, color); getDirty() = true; } }
-    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) { if (getCanvas()) { getCanvas()->drawFastHLine(x, y, w, color); getDirty() = true; } }
-    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) { if (getCanvas()) { getCanvas()->drawFastVLine(x, y, h, color); getDirty() = true; } }
+    void fillCircle(int16_t x, int16_t y, int16_t r, uint16_t color) { if (g_amoled_gfx) g_amoled_gfx->fillCircle(x, y, r, color); }
+    void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) { if (g_amoled_gfx) g_amoled_gfx->drawFastHLine(x, y, w, color); }
+    void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) { if (g_amoled_gfx) g_amoled_gfx->drawFastVLine(x, y, h, color); }
 
-    int16_t width() {
-        Arduino_Canvas* canvas = getCanvas();
-        return canvas ? canvas->width() : LCD_WIDTH;
-    }
-
-    int16_t height() {
-        Arduino_Canvas* canvas = getCanvas();
-        return canvas ? canvas->height() : LCD_HEIGHT;
-    }
-
-    void flush() {
-        if (!getDirty()) return;
-        getDirty() = false;
-        Arduino_Canvas* canvas = getCanvas();
-        if (canvas) canvas->flush();
-    }
+    int16_t width() { return g_amoled_gfx ? g_amoled_gfx->width() : LCD_WIDTH; }
+    int16_t height() { return g_amoled_gfx ? g_amoled_gfx->height() : LCD_HEIGHT; }
 
     void setBacklight(bool on) {
-#if defined(LCD_EN)
+        pinMode(LCD_EN, OUTPUT);
         digitalWrite(LCD_EN, on ? HIGH : LOW);
-#endif
-        Arduino_GFX* gfx = getGfx();
-        if (gfx) gfx->Display_Brightness(on ? 255 : 0);
+        if (g_amoled_gfx) g_amoled_gfx->Display_Brightness(on ? 200 : 0);
     }
 
-    void drawBattery(int percent, bool force = false) {
-        static int lastBat = -2;
-        if (force || lastBat != percent) {
-            lastBat = percent;
-            int screenW = width();
-            setTextSize(2);
-            setTextColor(0xFFFF, 0x0000);
-            setCursor(screenW - 55, 10);
-            char buf[16];
-            if (percent >= 0 && percent <= 100) {
-                snprintf(buf, sizeof(buf), "%3d%%", percent);
-            } else {
-                snprintf(buf, sizeof(buf), "---%%");
-            }
-            print(buf);
-        }
-    }
+    void drawBattery(int percent, bool force = false) {}
+    void flush() {}
 };

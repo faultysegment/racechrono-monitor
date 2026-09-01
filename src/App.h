@@ -17,11 +17,10 @@ class App {
     ViewPolicy viewPolicy;
     
 public:
-    App() : appView(state), appLogic(state, eventBus), viewPolicy(state) {
-        viewPolicy.setupScreens(appView, state);
-    }
+    App() : appView(state), appLogic(state, eventBus), viewPolicy(state) {}
 
     void setup() {
+        HWPolicy::initBoard();
         appView.init();
         appLogic.setup();
         viewPolicy.setupScreens(appView, state);

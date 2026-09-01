@@ -1,21 +1,47 @@
 #pragma once
+#include <Arduino.h>
 #include <Preferences.h>
 #include <SD.h>
 #include <SPI.h>
 #include <FS.h>
+#include "pin_config.h"
 #include <string>
 
 class AmoledStoragePolicy {
+    static SPIClass& getSPI() {
+        static SPIClass sdSPI(HSPI);
+        return sdSPI;
+    }
+
+    static bool& getMounted() {
+        static bool mounted = false;
+        return mounted;
+    }
+
 public:
     static bool initSD() {
-        static bool initialized = false;
-        static bool mounted = false;
-        if (!initialized) {
-            initialized = true;
-            SPI.begin(41, 40, 39, 38);
-            mounted = SD.begin(38, SPI);
+        static bool checked = false;
+        if (checked) return getMounted();
+        checked = true;
+
+        pinMode(SD_CS, OUTPUT);
+        digitalWrite(SD_CS, HIGH);
+
+        SPIClass& sdSPI = getSPI();
+        sdSPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+        if (SD.begin(SD_CS, sdSPI, 20000000)) {
+            if (SD.cardType() != CARD_NONE) {
+                getMounted() = true;
+                return true;
+            }
         }
-        return mounted;
+        
+        SD.end();
+        sdSPI.end();
+        pinMode(SD_CS, OUTPUT);
+        digitalWrite(SD_CS, HIGH);
+        getMounted() = false;
+        return false;
     }
 
     static void init() {
@@ -23,32 +49,49 @@ public:
     }
 
     static bool isCardPresent() {
-        if (!initSD()) return false;
-        return (SD.cardType() != CARD_NONE);
+        return getMounted();
     }
 
     static std::string readConfigFile(const char* filename = "/config.json") {
-        if (!isCardPresent()) return "";
-        File file = SD.open(filename, FILE_READ);
-        if (!file) return "";
-        std::string content;
-        content.reserve(file.size());
-        while (file.available()) {
-            content.push_back((char)file.read());
+        if (isCardPresent()) {
+            File file = SD.open(filename, FILE_READ);
+            if (file) {
+                std::string content;
+                content.reserve(file.size());
+                while (file.available()) {
+                    content.push_back((char)file.read());
+                }
+                file.close();
+                return content;
+            }
         }
-        file.close();
-        return content;
+        
+        // Fallback to internal Preferences
+        Preferences prefs;
+        prefs.begin("rcm_cfg", true);
+        String s = prefs.getString("json", "");
+        prefs.end();
+        return std::string(s.c_str());
     }
 
     static bool writeConfigFile(const char* filename, const char* content) {
-        if (!isCardPresent()) return false;
-        File file = SD.open(filename, FILE_WRITE);
-        if (!file) return false;
-        if (content) {
-            file.print(content);
+        if (!content) return false;
+        bool writtenToSD = false;
+        if (isCardPresent()) {
+            File file = SD.open(filename, FILE_WRITE);
+            if (file) {
+                file.print(content);
+                file.close();
+                writtenToSD = true;
+            }
         }
-        file.close();
-        return true;
+
+        // Always also save to Preferences for redundancy
+        Preferences prefs;
+        prefs.begin("rcm_cfg", false);
+        prefs.putString("json", content);
+        prefs.end();
+        return writtenToSD || true;
     }
     
     static float getFloat(const char* key, float defaultValue) {
@@ -58,7 +101,7 @@ public:
         prefs.end();
         return val;
     }
-    
+
     static void putFloat(const char* key, float value) {
         Preferences prefs;
         prefs.begin("rcm_settings", false);

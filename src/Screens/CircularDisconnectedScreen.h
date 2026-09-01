@@ -8,21 +8,7 @@ public:
     void onShow(DisplayPolicy& tft, AppState& state) override {
         tft.fillScreen(0x0000); 
         CircularUI<DisplayPolicy> ui(tft);
-        ui.begin();
-        
-        // Draw red accent ring indicating disconnected state
-        int cx = tft.width() / 2;
-        int cy = tft.height() / 2;
-        int radiusOut = std::min(cx, cy) - 5;
-        int radiusIn = radiusOut - std::max(4, (int)(radiusOut * 0.05f));
-        tft.fillCircle(cx, cy, radiusOut, 0xF800);
-        tft.fillCircle(cx, cy, radiusIn, 0x0000);
-        
-        // Main status text (Big bold red, size 4)
-        ui.textCenter("DISCONNECTED", 0xF800, 0.14f, 0.38f, 0x0000);
-        
-        // Subtitle (Crisp white, size 3)
-        ui.textCenter("Waiting for BLE...", 0xFFFF, 0.10f, 0.50f, 0x0000);
+        ui.textCenter("DISCONNECTED", 0xF800, 0.08f, 0.48f);
     }
 
     void onUpdate(DisplayPolicy& tft, AppState& state) override {}
