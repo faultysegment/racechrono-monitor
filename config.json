@@ -1,5 +1,10 @@
 {
   "isHud": false,
+  "webui": {
+    "enabled": false,
+    "ssid": "RaceChrono-Monitor",
+    "password": ""
+  },
   "monitors": [
     {
       "id": "lap_delta",

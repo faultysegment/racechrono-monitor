@@ -216,6 +216,11 @@ public:
     void saveDefaultConfig() {
         const char* defaultJson = "{\n"
             "  \"isHud\": false,\n"
+            "  \"webui\": {\n"
+            "    \"enabled\": false,\n"
+            "    \"ssid\": \"RaceChrono-Monitor\",\n"
+            "    \"password\": \"\"\n"
+            "  },\n"
             "  \"monitors\": [\n"
             "    {\n"
             "      \"id\": \"lap_delta\",\n"

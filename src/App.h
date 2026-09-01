@@ -51,4 +51,8 @@ public:
     EventBus& getEventBus() {
         return eventBus;
     }
+
+    AppState& getState() {
+        return state;
+    }
 };

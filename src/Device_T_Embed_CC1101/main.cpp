@@ -9,10 +9,12 @@
 #include "Policies/RealHWPolicy.h"
 #include "Policies/RealBLEPolicy.h"
 #include "Policies/RealStoragePolicy.h"
+#include "Policies/RealWebConfigPolicy.h"
 #include "../App.h"
 #include "Policies/TEmbedViewPolicy.h"
 
 App<RealDisplayPolicy, RealHWPolicy, RealBLEPolicy, RealStoragePolicy, TEmbedViewPolicy<RealDisplayPolicy>> app;
+RealWebConfigPolicy<RealStoragePolicy> webConfig;
 
 void uiTask(void* pvParameters) {
     Event e;
@@ -39,14 +41,23 @@ void logicTask(void* pvParameters) {
     }
 }
 
+void webTask(void* pvParameters) {
+    webConfig.begin(app.getState(), app.getEventBus());
+    while (1) {
+        webConfig.handleClient();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 void setup() {
     app.setup();
 
     // Pin UI to Core 1 (App Core) to dedicate it for SPI/display rendering
     xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 1, NULL, 1);
-    // Pin Input and Logic to Core 0 (Pro Core) where BLE/WiFi usually runs
+    // Pin Input, Logic, and WebUI to Core 0 (Pro Core) where BLE/WiFi runs
     xTaskCreatePinnedToCore(inputTask, "Input_Task", 2048, NULL, 2, NULL, 0);
     xTaskCreatePinnedToCore(logicTask, "Logic_Task", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(webTask, "Web_Task", 4096, NULL, 1, NULL, 0);
 }
 
 void loop() {

@@ -9,10 +9,12 @@
 #include "Policies/AmoledHWPolicy.h"
 #include "Policies/AmoledBLEPolicy.h"
 #include "Policies/AmoledStoragePolicy.h"
+#include "Policies/AmoledWebConfigPolicy.h"
 #include "../../App.h"
 #include "Policies/AmoledViewPolicy.h"
 
 App<AmoledDisplayPolicy, AmoledHWPolicy, AmoledBLEPolicy, AmoledStoragePolicy, AmoledViewPolicy<AmoledDisplayPolicy>> app;
+AmoledWebConfigPolicy<AmoledStoragePolicy> webConfig;
 
 void uiTask(void* pvParameters) {
     Event e;
@@ -39,6 +41,14 @@ void logicTask(void* pvParameters) {
     }
 }
 
+void webTask(void* pvParameters) {
+    webConfig.begin(app.getState(), app.getEventBus());
+    while (1) {
+        webConfig.handleClient();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 void setup() {
     app.setup();
 
@@ -48,8 +58,9 @@ void setup() {
     // Pin UI Rendering to Core 1 (APP_CPU) for dedicated display rendering
     xTaskCreatePinnedToCore(uiTask, "UI_Task", 4096, NULL, 1, NULL, 1);
 
-    // Pin Logic to Core 0 (PRO_CPU)
+    // Pin Logic and WebUI to Core 0 (PRO_CPU)
     xTaskCreatePinnedToCore(logicTask, "Logic_Task", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(webTask, "Web_Task", 4096, NULL, 1, NULL, 0);
 }
 
 void loop() {
