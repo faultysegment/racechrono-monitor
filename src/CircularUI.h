@@ -71,8 +71,7 @@ public:
         const int minThickness = 4;
 
         if (pct <= 0.001f) {
-            tft.fillCircle(cx, cy, radiusOut, bgColor);
-            tft.fillCircle(cx, cy, radiusOut - minThickness, 0x0000);
+            tft.fillCircle(cx, cy, radiusOut, 0x0000);
         } else {
             if (pct < 0.10f) {
                 pct = 0.10f;

@@ -70,16 +70,8 @@ public:
                 showMessage("Disconnected", 0xF800, 0x0000); 
                 break;
             case EventType::UI_SHOW_CONFIGURING:
-                tft.setTextColor(0xD69A, 0x0000); 
-                tft.print("Configuring... ");
-                break;
             case EventType::UI_SHOW_CONFIG_DONE:
-                tft.setTextColor(0xD69A, 0x0000);
-                tft.println("Done");
-                break;
             case EventType::UI_SHOW_CONFIG_FAIL:
-                tft.setTextColor(0xF800, 0x0000); 
-                tft.println("Fail");
                 break;
             case EventType::HW_PWR_BTN_LONG_PRESS:
             case EventType::UI_SHOW_POWER_OFF:

@@ -50,7 +50,7 @@ public:
 
     void setRotation(uint8_t r) {
         Arduino_Canvas* canvas = getCanvas();
-        if (canvas) canvas->setRotation(r);
+        if (canvas) canvas->setRotation(0);
     }
 
     void setHudMode(bool hud) {
