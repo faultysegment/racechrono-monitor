@@ -43,6 +43,7 @@ public:
 
         ::pinMode(39, OUTPUT); ::digitalWrite(39, HIGH); 
         ::pinMode(41, OUTPUT); ::digitalWrite(41, HIGH); 
+        ::pinMode(13, OUTPUT); ::digitalWrite(13, HIGH); 
         
         ::delay(100);
 

@@ -6,26 +6,14 @@
 #include <FS.h>
 #include <string>
 
-#define BOARD_SD_CS   13
-#define BOARD_SD_SCLK 11
-#define BOARD_SD_MOSI 9
-#define BOARD_SD_MISO 10
+#define BOARD_SD_CS 13
 
 class RealStoragePolicy {
-    SPIClass sdSPI;
     bool checked = false;
     bool mounted = false;
 
 public:
-    RealStoragePolicy() : sdSPI(HSPI), checked(false), mounted(false) {}
-
-    ~RealStoragePolicy() {
-        if (mounted) {
-            SD.end();
-            sdSPI.end();
-            mounted = false;
-        }
-    }
+    RealStoragePolicy() = default;
 
     bool initSD() {
         if (checked) return mounted;
@@ -34,16 +22,16 @@ public:
         pinMode(BOARD_SD_CS, OUTPUT);
         digitalWrite(BOARD_SD_CS, HIGH);
 
-        sdSPI.begin(BOARD_SD_SCLK, BOARD_SD_MISO, BOARD_SD_MOSI, BOARD_SD_CS);
-        if (SD.begin(BOARD_SD_CS, sdSPI, 20000000)) {
+        // On T-Embed, SPI bus is shared with TFT_eSPI (pins 11, 9, 10).
+        // Never re-initialize or call sdSPI.end() as that detaches the SPI hardware pins.
+        if (SD.begin(BOARD_SD_CS, SPI, 4000000)) {
             if (SD.cardType() != CARD_NONE) {
                 mounted = true;
                 return true;
             }
+            SD.end();
         }
         
-        SD.end();
-        sdSPI.end();
         pinMode(BOARD_SD_CS, OUTPUT);
         digitalWrite(BOARD_SD_CS, HIGH);
         mounted = false;
@@ -74,7 +62,7 @@ public:
             }
         }
 
-        // Fallback to internal Preferences
+        // Fallback to internal Preferences (NVS flash)
         Preferences prefs;
         prefs.begin("rcm_cfg", true);
         String s = prefs.getString("json", "");
