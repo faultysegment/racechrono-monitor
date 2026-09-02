@@ -8,30 +8,32 @@
 #include <string>
 
 class AmoledStoragePolicy {
-    static SPIClass& getSPI() {
-        static SPIClass sdSPI(HSPI);
-        return sdSPI;
-    }
-
-    static bool& getMounted() {
-        static bool mounted = false;
-        return mounted;
-    }
+    SPIClass sdSPI;
+    bool checked = false;
+    bool mounted = false;
 
 public:
-    static bool initSD() {
-        static bool checked = false;
-        if (checked) return getMounted();
+    AmoledStoragePolicy() : sdSPI(HSPI), checked(false), mounted(false) {}
+
+    ~AmoledStoragePolicy() {
+        if (mounted) {
+            SD.end();
+            sdSPI.end();
+            mounted = false;
+        }
+    }
+
+    bool initSD() {
+        if (checked) return mounted;
         checked = true;
 
         pinMode(SD_CS, OUTPUT);
         digitalWrite(SD_CS, HIGH);
 
-        SPIClass& sdSPI = getSPI();
         sdSPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
         if (SD.begin(SD_CS, sdSPI, 20000000)) {
             if (SD.cardType() != CARD_NONE) {
-                getMounted() = true;
+                mounted = true;
                 return true;
             }
         }
@@ -40,19 +42,19 @@ public:
         sdSPI.end();
         pinMode(SD_CS, OUTPUT);
         digitalWrite(SD_CS, HIGH);
-        getMounted() = false;
+        mounted = false;
         return false;
     }
 
-    static void init() {
+    void init() {
         initSD();
     }
 
-    static bool isCardPresent() {
-        return getMounted();
+    bool isCardPresent() {
+        return mounted;
     }
 
-    static std::string readConfigFile(const char* filename = "/config.json") {
+    std::string readConfigFile(const char* filename = "/config.json") {
         if (isCardPresent()) {
             File file = SD.open(filename, FILE_READ);
             if (file) {
@@ -74,7 +76,7 @@ public:
         return std::string(s.c_str());
     }
 
-    static bool writeConfigFile(const char* filename, const char* content) {
+    bool writeConfigFile(const char* filename, const char* content) {
         if (!content) return false;
         bool writtenToSD = false;
         if (isCardPresent()) {
@@ -94,7 +96,7 @@ public:
         return writtenToSD || true;
     }
     
-    static float getFloat(const char* key, float defaultValue) {
+    float getFloat(const char* key, float defaultValue) {
         Preferences prefs;
         prefs.begin("rcm_settings", true); 
         float val = prefs.getFloat(key, defaultValue);
@@ -102,14 +104,14 @@ public:
         return val;
     }
 
-    static void putFloat(const char* key, float value) {
+    void putFloat(const char* key, float value) {
         Preferences prefs;
         prefs.begin("rcm_settings", false);
         prefs.putFloat(key, value);
         prefs.end();
     }
 
-    static int getInt(const char* key, int defaultValue) {
+    int getInt(const char* key, int defaultValue) {
         Preferences prefs;
         prefs.begin("rcm_settings", true);
         int val = prefs.getInt(key, defaultValue);
@@ -117,7 +119,7 @@ public:
         return val;
     }
 
-    static void putInt(const char* key, int value) {
+    void putInt(const char* key, int value) {
         Preferences prefs;
         prefs.begin("rcm_settings", false);
         prefs.putInt(key, value);

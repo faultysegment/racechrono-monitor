@@ -3,16 +3,16 @@
 #include "../../EventBus.h"
 
 struct MockHWPolicy {
-    static uint32_t currentMillis;
-    static bool powerKeyPressed;
-    static bool actionKeyPressed;
-    static bool sleepCalled;
-    static bool rebootCalled;
+    uint32_t currentMillis = 0;
+    bool powerKeyPressed = false;
+    bool actionKeyPressed = false;
+    bool sleepCalled = false;
+    bool rebootCalled = false;
 
-    static int navigationDelta;
-    static int batteryPercent;
+    int navigationDelta = 0;
+    int batteryPercent = 100;
 
-    static void reset() {
+    void reset() {
         currentMillis = 0;
         powerKeyPressed = false;
         actionKeyPressed = false;
@@ -22,57 +22,45 @@ struct MockHWPolicy {
         batteryPercent = 100;
     }
 
-    static void initBoard() {}
+    void initBoard() {}
     
-    static int getNavigationDelta() {
+    int getNavigationDelta() {
         int d = navigationDelta;
         navigationDelta = 0;
         return d;
     }
 
-    static void pollExtraEvents(EventBus& bus) {}
+    void pollExtraEvents(EventBus& bus) {}
 
-    static bool isPowerKeyPressed() {
+    bool isPowerKeyPressed() {
         return powerKeyPressed;
     }
 
-    static bool isActionKeyPressed() {
+    bool isActionKeyPressed() {
         return actionKeyPressed;
     }
 
-    static void powerOffBoard() {
+    void powerOffBoard() {
         sleepCalled = true;
     }
 
-    static void reboot() {
+    void reboot() {
         rebootCalled = true;
     }
 
-    static void initBattery() {}
-    static int getBatteryPercent() { return batteryPercent; }
+    void initBattery() {}
+    int getBatteryPercent() { return batteryPercent; }
 
-    static void delay(uint32_t ms) {
+    void delay(uint32_t ms) {
         currentMillis += ms;
     }
     
-    static uint32_t millis() {
+    uint32_t millis() {
         return currentMillis;
     }
     
-    static void getMacDefault(uint8_t* mac) {
+    void getMacDefault(uint8_t* mac) {
         mac[0] = 0xAA; mac[1] = 0xBB; mac[2] = 0xCC; 
         mac[3] = 0xDD; mac[4] = 0xEE; mac[5] = 0xFF;
     }
 };
-
-// These should normally be in a .cpp file to avoid multiple definition errors
-// but for unity tests we usually compile them per-test executable.
-#ifdef PIO_UNIT_TESTING
-uint32_t MockHWPolicy::currentMillis = 0;
-bool MockHWPolicy::powerKeyPressed = false;
-bool MockHWPolicy::actionKeyPressed = false;
-bool MockHWPolicy::sleepCalled = false;
-bool MockHWPolicy::rebootCalled = false;
-int MockHWPolicy::navigationDelta = 0;
-int MockHWPolicy::batteryPercent = 100;
-#endif

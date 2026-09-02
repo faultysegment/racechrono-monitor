@@ -4,11 +4,11 @@
 #include "../../EventBus.h"
 
 class MockBLEPolicy {
-    static EventBus* bus;
+    EventBus* bus = nullptr;
 public:
-    static int connectedCount;
-    static bool indicating;
-    static std::vector<std::string> sentConfigCommands;
+    int connectedCount = 0;
+    bool indicating = false;
+    std::vector<std::string> sentConfigCommands;
 
     void init(const char* name, EventBus* b) {
         bus = b;
@@ -28,7 +28,7 @@ public:
         sentConfigCommands.push_back(std::string((char*)data, len));
     }
 
-    static void reset() {
+    void reset() {
         connectedCount = 0;
         indicating = false;
         sentConfigCommands.clear();
@@ -36,27 +36,20 @@ public:
     }
 
     // Helpers to simulate BLE events in tests
-    static void simulateConnect() {
+    void simulateConnect() {
         connectedCount = 1;
     }
     
-    static void simulateDisconnect() {
+    void simulateDisconnect() {
         connectedCount = 0;
         if(bus) bus->push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
     }
 
-    static void simulateConfigWrite(const std::string& data) {
+    void simulateConfigWrite(const std::string& data) {
         if(bus) bus->push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0, data});
     }
 
-    static void simulateNotificationWrite(const std::string& data) {
+    void simulateNotificationWrite(const std::string& data) {
         if(bus) bus->push(Event{EventType::BLE_MONITOR_UPDATE, 0, 0, 0, data});
     }
 };
-
-#ifdef PIO_UNIT_TESTING
-EventBus* MockBLEPolicy::bus = nullptr;
-int MockBLEPolicy::connectedCount = 0;
-bool MockBLEPolicy::indicating = false;
-std::vector<std::string> MockBLEPolicy::sentConfigCommands;
-#endif

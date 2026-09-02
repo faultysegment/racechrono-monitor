@@ -5,6 +5,7 @@
 class RealDisplayPolicy {
     TFT_eSPI tft;
     bool isHudMode = false;
+    int lastBat = -2;
 public:
     void init() {
         tft.init();
@@ -45,7 +46,6 @@ public:
     }
 
     void drawBattery(int percent, bool force = false) {
-        static int lastBat = -2;
         if (force || lastBat != percent) {
             lastBat = percent;
             int screenW = width();

@@ -10,22 +10,24 @@ template <typename StoragePolicy>
 class RealWebConfigPolicy {
     WebServer* server = nullptr;
     EventBus* bus = nullptr;
+    StoragePolicy* storage = nullptr;
     bool isRunning = false;
 
 public:
-    RealWebConfigPolicy() : server(nullptr), bus(nullptr), isRunning(false) {}
+    RealWebConfigPolicy() : server(nullptr), bus(nullptr), storage(nullptr), isRunning(false) {}
 
     ~RealWebConfigPolicy() {
         stop();
     }
 
-    void begin(AppState& state, EventBus& eventBus) {
+    void begin(AppState& state, EventBus& eventBus, StoragePolicy& storagePolicy) {
         if (!state.webuiConfig.enabled || state.webuiConfig.ssid[0] == '\0') {
             WiFi.mode(WIFI_OFF);
             return;
         }
 
         bus = &eventBus;
+        storage = &storagePolicy;
 
         IPAddress local_IP(192, 168, 1, 1);
         IPAddress gateway(192, 168, 1, 1);
@@ -49,7 +51,7 @@ public:
         });
 
         server->on("/api/config", HTTP_GET, [this]() {
-            std::string content = StoragePolicy::readConfigFile("/config.json");
+            std::string content = storage ? storage->readConfigFile("/config.json") : "";
             if (content.empty()) {
                 content = "{}";
             }
@@ -69,7 +71,7 @@ public:
                 return;
             }
 
-            StoragePolicy::writeConfigFile("/config.json", body.c_str());
+            if (storage) storage->writeConfigFile("/config.json", body.c_str());
             if (bus) bus->push(Event{EventType::EVENT_CONFIG_RELOAD, 0, 0, 0});
             server->send(200, "application/json", "{\"status\":\"ok\"}");
         });

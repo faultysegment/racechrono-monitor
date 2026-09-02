@@ -9,14 +9,15 @@
 #endif
 
 AppState state;
-View<MockDisplayPolicy, MockHWPolicy> view(state);
+MockHWPolicy mockHw;
+View<MockDisplayPolicy, MockHWPolicy> view(state, mockHw);
 
 MockViewPolicy<MockDisplayPolicy> viewPolicy(state);
 
 void setUp(void) {
     state.reset();
-    MockDisplayPolicy::reset();
-    MockHWPolicy::reset();
+    view.getDisplay().reset();
+    mockHw.reset();
 
     state.clearMonitorConfigs();
     state.clearScreenConfigs();
@@ -31,14 +32,14 @@ void tearDown(void) {}
 
 void test_view_show_connected(void) {
     view.processEvent(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
-    TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastFillScreenColor);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("BLE connected!") != std::string::npos);
+    TEST_ASSERT_EQUAL(TFT_BLACK, view.getDisplay().lastFillScreenColor);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("BLE connected!") != std::string::npos);
 }
 
 void test_view_show_disconnected(void) {
     view.processEvent(Event{EventType::UI_SHOW_DISCONNECTED, 0, 0, 0});
-    TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastFillScreenColor);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("Disconnected") != std::string::npos);
+    TEST_ASSERT_EQUAL(TFT_BLACK, view.getDisplay().lastFillScreenColor);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("Disconnected") != std::string::npos);
 }
 
 void test_view_update_bars(void) {
@@ -53,54 +54,54 @@ void test_view_update_bars(void) {
     
     // Test rectangular monitor0 (Time) - index 1 (circ0 is index 0)
     state.currentScreenIndex = 1;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+5.00") != std::string::npos);
-    TEST_ASSERT_EQUAL(2, MockDisplayPolicy::lastRects.size());
-    if (MockDisplayPolicy::lastRects.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastRects[0].color); // Time positive is bad
-        TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[0].w); // 50% of 320
-        TEST_ASSERT_EQUAL(TFT_DARKGREY, MockDisplayPolicy::lastRects[1].color);
-        TEST_ASSERT_EQUAL(160, MockDisplayPolicy::lastRects[1].w);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("TIME") != std::string::npos);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+5.00") != std::string::npos);
+    TEST_ASSERT_EQUAL(2, view.getDisplay().lastRects.size());
+    if (view.getDisplay().lastRects.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_RED, view.getDisplay().lastRects[0].color); // Time positive is bad
+        TEST_ASSERT_EQUAL(160, view.getDisplay().lastRects[0].w); // 50% of 320
+        TEST_ASSERT_EQUAL(TFT_DARKGREY, view.getDisplay().lastRects[1].color);
+        TEST_ASSERT_EQUAL(160, view.getDisplay().lastRects[1].w);
     }
 
     // Test rectangular monitor1 (Speed) - index 3 (circ1 is index 2)
     state.currentScreenIndex = 3;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("SPEED") != std::string::npos);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+2.0") != std::string::npos);
-    TEST_ASSERT_EQUAL(2, MockDisplayPolicy::lastRects.size());
-    if (MockDisplayPolicy::lastRects.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_GREEN, MockDisplayPolicy::lastRects[0].color); // Speed positive is good
-        TEST_ASSERT_EQUAL(128, MockDisplayPolicy::lastRects[0].w); // 40% of 320
-        TEST_ASSERT_EQUAL(TFT_DARKGREY, MockDisplayPolicy::lastRects[1].color);
-        TEST_ASSERT_EQUAL(192, MockDisplayPolicy::lastRects[1].w); // 320 - 128
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("SPEED") != std::string::npos);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+2.0") != std::string::npos);
+    TEST_ASSERT_EQUAL(2, view.getDisplay().lastRects.size());
+    if (view.getDisplay().lastRects.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_GREEN, view.getDisplay().lastRects[0].color); // Speed positive is good
+        TEST_ASSERT_EQUAL(128, view.getDisplay().lastRects[0].w); // 40% of 320
+        TEST_ASSERT_EQUAL(TFT_DARKGREY, view.getDisplay().lastRects[1].color);
+        TEST_ASSERT_EQUAL(192, view.getDisplay().lastRects[1].w); // 320 - 128
     }
 }
 
 void test_mock_display_hud_mode(void) {
     MockDisplayPolicy display;
-    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_FALSE(display.isHud);
     display.setHudMode(true);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_TRUE(display.isHud);
     display.setHudMode(false);
-    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_FALSE(display.isHud);
 }
 
 void test_view_global_hud_mode(void) {
     state.reset();
     state.isHud = true;
     state.isConnected = false;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
 
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_TRUE(view.getDisplay().isHud);
 
     state.isHud = false;
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_FALSE(MockDisplayPolicy::isHud);
+    TEST_ASSERT_FALSE(view.getDisplay().isHud);
 }
 
 void test_screen_registration(void) {
@@ -110,7 +111,7 @@ void test_screen_registration(void) {
     state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}});
     state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}});
 
-    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state, mockHw);
     MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
@@ -123,7 +124,7 @@ void test_screen_registration_single_monitor(void) {
     state.clearScreenConfigs();
     state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}, ScreenSlotConfig{}});
 
-    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state, mockHw);
     MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
@@ -137,7 +138,7 @@ void test_view_custom_screen_composition(void) {
     state.addScreenConfig(ScreenConfig{ScreenType::DUAL, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F}}); // top: SPEED (idx 1), btm: TIME (idx 0)
     state.addScreenConfig(ScreenConfig{ScreenType::SINGLE, ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F}, ScreenSlotConfig{}}); // single: SPEED (idx 1)
 
-    View<MockDisplayPolicy, MockHWPolicy> mockView(state);
+    View<MockDisplayPolicy, MockHWPolicy> mockView(state, mockHw);
     MockViewPolicy<MockDisplayPolicy> policy(state);
     policy.setupScreens(mockView, state);
 
@@ -156,17 +157,17 @@ void test_circular_monitor_screen_radial_bar(void) {
 
     // Screen 0 in NativeViewPolicy is circMonitor0
     state.currentScreenIndex = 0;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
 
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("TIME") != std::string::npos);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("+5.00") != std::string::npos);
-    TEST_ASSERT_EQUAL(TFT_BLUE, MockDisplayPolicy::lastTextColor); // Value text is always blue
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("TIME") != std::string::npos);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+5.00") != std::string::npos);
+    TEST_ASSERT_EQUAL(TFT_BLUE, view.getDisplay().lastTextColor); // Value text is always blue
     // Radial bar draws outer circle (filledColor) and inner circle (0x0000)
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastCircles.size() >= 2);
-    if (MockDisplayPolicy::lastCircles.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_RED, MockDisplayPolicy::lastCircles[0].color); // Time positive is bad -> Red
-        TEST_ASSERT_EQUAL(TFT_BLACK, MockDisplayPolicy::lastCircles[1].color); // Inner clear circle
+    TEST_ASSERT_TRUE(view.getDisplay().lastCircles.size() >= 2);
+    if (view.getDisplay().lastCircles.size() >= 2) {
+        TEST_ASSERT_EQUAL(TFT_RED, view.getDisplay().lastCircles[0].color); // Time positive is bad -> Red
+        TEST_ASSERT_EQUAL(TFT_BLACK, view.getDisplay().lastCircles[1].color); // Inner clear circle
     }
 }
 
@@ -181,13 +182,13 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
 
     // Screen 0 in NativeViewPolicy is circMonitor0
     state.currentScreenIndex = 0;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
 
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastCircles.size() >= 2);
-    if (MockDisplayPolicy::lastCircles.size() >= 2) {
-        int radiusOut = MockDisplayPolicy::lastCircles[0].r;
-        int rIn = MockDisplayPolicy::lastCircles[1].r;
+    TEST_ASSERT_TRUE(view.getDisplay().lastCircles.size() >= 2);
+    if (view.getDisplay().lastCircles.size() >= 2) {
+        int radiusOut = view.getDisplay().lastCircles[0].r;
+        int rIn = view.getDisplay().lastCircles[1].r;
         int maxThickness = std::max(12, (int)std::round((float)radiusOut * 0.15f));
         int minThickness = 4;
         int expectedRin = radiusOut - (minThickness + (int)std::round((float)(maxThickness - minThickness) * 0.10f));
@@ -198,12 +199,12 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
 void test_view_configuring_screen(void) {
     state.reset();
     state.isConnected = false;
-    MockHWPolicy::currentMillis = 5000;
+    mockHw.currentMillis = 5000;
     state.lastHeartbeatMillis = 5000;
-    MockDisplayPolicy::reset();
+    view.getDisplay().reset();
 
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("CONFIG MODE") != std::string::npos);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("CONFIG MODE") != std::string::npos);
 }
 
 #ifdef ARDUINO

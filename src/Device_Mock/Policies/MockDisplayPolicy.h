@@ -23,15 +23,16 @@ struct MockCircle {
 
 class MockDisplayPolicy {
 public:
-    static std::string lastPrint;
-    static uint32_t lastFillScreenColor;
-    static std::vector<MockRect> lastRects;
-    static std::vector<MockCircle> lastCircles;
-    static uint32_t lastTextColor;
-    static std::vector<uint32_t> allTextColors;
-    static bool isHud;
+    std::string lastPrint = "";
+    uint32_t lastFillScreenColor = 0;
+    std::vector<MockRect> lastRects;
+    std::vector<MockCircle> lastCircles;
+    uint32_t lastTextColor = 0;
+    std::vector<uint32_t> allTextColors;
+    bool isHud = false;
+    int currentTextSize = 1;
 
-    static void reset() {
+    void reset() {
         lastPrint = "";
         lastFillScreenColor = 0;
         lastRects.clear();
@@ -39,6 +40,7 @@ public:
         lastTextColor = 0;
         allTextColors.clear();
         isHud = false;
+        currentTextSize = 1;
     }
 
     void init() {}
@@ -47,7 +49,6 @@ public:
     void fillScreen(uint32_t color) { lastFillScreenColor = color; }
     void setCursor(int16_t x, int16_t y) {}
     void setTextWrap(bool wrap) {}
-    int currentTextSize = 1;
     void setTextSize(uint8_t size) { currentTextSize = size; }
     int16_t textWidth(const char* str) { return strlen(str) * 6 * currentTextSize; }
     void setTextColor(uint32_t c) { lastTextColor = c; allTextColors.push_back(c); }
@@ -70,13 +71,3 @@ public:
         lastPrint += "Bat:" + std::to_string(percent) + "%";
     }
 };
-
-#ifdef PIO_UNIT_TESTING
-std::string MockDisplayPolicy::lastPrint = "";
-uint32_t MockDisplayPolicy::lastFillScreenColor = 0;
-std::vector<MockRect> MockDisplayPolicy::lastRects;
-std::vector<MockCircle> MockDisplayPolicy::lastCircles;
-uint32_t MockDisplayPolicy::lastTextColor = 0;
-std::vector<uint32_t> MockDisplayPolicy::allTextColors;
-bool MockDisplayPolicy::isHud = false;
-#endif

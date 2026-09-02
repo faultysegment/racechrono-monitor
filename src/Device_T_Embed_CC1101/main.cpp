@@ -42,7 +42,7 @@ void logicTask(void* pvParameters) {
 }
 
 void webTask(void* pvParameters) {
-    webConfig.begin(app.getState(), app.getEventBus());
+    webConfig.begin(app.getState(), app.getEventBus(), app.getStorage());
     while (1) {
         webConfig.handleClient();
         vTaskDelay(pdMS_TO_TICKS(10));

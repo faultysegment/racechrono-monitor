@@ -12,15 +12,17 @@ template <typename DisplayPolicy, typename HWPolicy, typename BLEPolicy, typenam
 class App {
     AppState state;
     EventBus eventBus;
+    HWPolicy hwPolicy;
+    StoragePolicy storagePolicy;
     View<DisplayPolicy, HWPolicy> appView;
     AppLogic<BLEPolicy, HWPolicy, StoragePolicy> appLogic;
     ViewPolicy viewPolicy;
     
 public:
-    App() : appView(state), appLogic(state, eventBus), viewPolicy(state) {}
+    App() : appView(state, hwPolicy), appLogic(state, eventBus, hwPolicy, storagePolicy), viewPolicy(state) {}
 
     void setup() {
-        HWPolicy::initBoard();
+        hwPolicy.initBoard();
         appView.init();
         appLogic.setup();
         viewPolicy.setupScreens(appView, state);
@@ -53,5 +55,13 @@ public:
 
     AppState& getState() {
         return state;
+    }
+
+    StoragePolicy& getStorage() {
+        return storagePolicy;
+    }
+
+    HWPolicy& getHW() {
+        return hwPolicy;
     }
 };

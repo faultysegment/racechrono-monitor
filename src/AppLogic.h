@@ -26,37 +26,47 @@ template <typename BLEPolicy, typename HWPolicy, typename StoragePolicy>
 class AppLogic {
     AppState& state;
     EventBus& bus;
+    HWPolicy& hw;
+    StoragePolicy& storage;
     BLEPolicy ble;
 
     bool wasConnected;
     bool wasIndicating;
+    uint32_t buttonPressStartTime;
+    bool buttonPressed;
+    bool lastActionBtn;
+    uint32_t actionBtnPressTime;
+    uint32_t lastBatteryUpdate;
 
 public:
-    AppLogic(AppState& s, EventBus& b) : 
-        state(s), bus(b), wasConnected(true), wasIndicating(false) {
+    AppLogic(AppState& s, EventBus& b, HWPolicy& h, StoragePolicy& st) : 
+        state(s), bus(b), hw(h), storage(st), wasConnected(true), wasIndicating(false),
+        buttonPressStartTime(0), buttonPressed(false), lastActionBtn(false), actionBtnPressTime(0), lastBatteryUpdate(0) {
+    }
+
+    BLEPolicy& getBLE() {
+        return ble;
     }
     
     void setup() {
-        StoragePolicy::init();
+        storage.init();
         loadConfig();
         restoreDisconnectedScreen();
         restoreConnectedScreen();
 
-        HWPolicy::initBattery();
-        state.batteryPercent = HWPolicy::getBatteryPercent();
+        hw.initBattery();
+        state.batteryPercent = hw.getBatteryPercent();
 
         bluetoothStart();
     }
 
     void pollInput() {
-        static uint32_t buttonPressStartTime = 0;
-        static bool buttonPressed = false;
-        if (HWPolicy::isPowerKeyPressed()) {
+        if (hw.isPowerKeyPressed()) {
             if (!buttonPressed) {
                 buttonPressed = true;
-                buttonPressStartTime = HWPolicy::millis();
+                buttonPressStartTime = hw.millis();
                 bus.push(Event{EventType::HW_PWR_BTN_PRESS, 0, 0, 0});
-            } else if (HWPolicy::millis() - buttonPressStartTime >= 3000) {
+            } else if (hw.millis() - buttonPressStartTime >= 3000) {
                 bus.push(Event{EventType::HW_PWR_BTN_LONG_PRESS, 0, 0, 0});
                 buttonPressed = false; // Prevent repeated triggers
             }
@@ -67,26 +77,24 @@ public:
             buttonPressed = false;
         }
 
-        static bool lastActionBtn = false;
-        static uint32_t actionBtnPressTime = 0;
-        bool actionBtn = HWPolicy::isActionKeyPressed();
+        bool actionBtn = hw.isActionKeyPressed();
         
         if (!lastActionBtn && actionBtn) { // Pressed
-            actionBtnPressTime = HWPolicy::millis();
+            actionBtnPressTime = hw.millis();
         } else if (lastActionBtn && !actionBtn) { // Released
-            uint32_t duration = HWPolicy::millis() - actionBtnPressTime;
+            uint32_t duration = hw.millis() - actionBtnPressTime;
             if (duration > 50 && duration < 1000) {
                 bus.push(Event{EventType::HW_ACTION_TOGGLE, 0, 0, 0});
             }
         }
         lastActionBtn = actionBtn;
 
-        int navDelta = HWPolicy::getNavigationDelta();
+        int navDelta = hw.getNavigationDelta();
         if (navDelta != 0) {
             bus.push(Event{EventType::HW_NAV_DELTA, navDelta, 0, 0});
         }
         
-        HWPolicy::pollExtraEvents(bus);
+        hw.pollExtraEvents(bus);
     }
 
     void pollLogic() {
@@ -100,10 +108,9 @@ public:
             }
         }
 
-        static uint32_t lastBatteryUpdate = 0;
-        if (HWPolicy::millis() - lastBatteryUpdate > 5000) {
-            bus.push(Event{EventType::SYS_BATTERY_UPDATE, HWPolicy::getBatteryPercent(), 0, 0});
-            lastBatteryUpdate = HWPolicy::millis();
+        if (hw.millis() - lastBatteryUpdate > 5000) {
+            bus.push(Event{EventType::SYS_BATTERY_UPDATE, hw.getBatteryPercent(), 0, 0});
+            lastBatteryUpdate = hw.millis();
         }
         
         bool isIndicating = isConnected && ble.isConfigIndicating();
@@ -114,14 +121,14 @@ public:
         wasIndicating = isIndicating;
 
         // Configuration state machine tick
-        if (isConnected && !state.isConfigured && !state.isConfiguring(HWPolicy::millis())) {
+        if (isConnected && !state.isConfigured && !state.isConfiguring(hw.millis())) {
             if (isIndicating) {
                 bus.push(Event{EventType::BLE_CONFIG_MONITOR, 0, 0, 0});
             }
         }
 
         // WebUI heartbeat timeout check
-        if (state.lastHeartbeatMillis != 0 && (HWPolicy::millis() - state.lastHeartbeatMillis >= AppState::CONFIG_MODE_TIMEOUT_MS)) {
+        if (state.lastHeartbeatMillis != 0 && (hw.millis() - state.lastHeartbeatMillis >= AppState::CONFIG_MODE_TIMEOUT_MS)) {
             state.lastHeartbeatMillis = 0;
             bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
         }
@@ -138,7 +145,7 @@ public:
                 break;
 
             case EventType::HW_PWR_BTN_LONG_PRESS:
-                HWPolicy::powerOffBoard();
+                hw.powerOffBoard();
                 break;
 
             case EventType::BLE_CONNECTED:
@@ -188,7 +195,7 @@ public:
                 break;
 
             case EventType::EVENT_CONFIG_MODE_ENTER:
-                state.lastHeartbeatMillis = HWPolicy::millis();
+                state.lastHeartbeatMillis = hw.millis();
                 bus.push(Event{EventType::UI_UPDATE, 0, 0, 0});
                 break;
 
@@ -204,7 +211,7 @@ public:
                 break;
 
             case EventType::EVENT_DEVICE_REBOOT:
-                HWPolicy::reboot();
+                hw.reboot();
                 break;
 
             default:
@@ -270,7 +277,7 @@ public:
             "    }\n"
             "  ]\n"
             "}\n";
-        StoragePolicy::writeConfigFile("/config.json", defaultJson);
+        storage.writeConfigFile("/config.json", defaultJson);
     }
 
     void loadDefaultConfig() {
@@ -315,9 +322,9 @@ public:
     }
 
     void loadConfig() {
-        std::string jsonStr = StoragePolicy::readConfigFile("/config.json");
+        std::string jsonStr = storage.readConfigFile("/config.json");
         if (jsonStr.empty()) {
-            if (StoragePolicy::isCardPresent()) {
+            if (storage.isCardPresent()) {
                 saveDefaultConfig();
             }
             loadDefaultConfig();
@@ -445,7 +452,7 @@ public:
 
 private:
     void restoreConnectedScreen() {
-        int baseScreen = StoragePolicy::getInt("last_screen", 0);
+        int baseScreen = storage.getInt("last_screen", 0);
         int numConnected = state.numConnectedScreens;
         if (numConnected > 0) {
             state.currentScreenIndex = (baseScreen % numConnected + numConnected) % numConnected;
@@ -467,7 +474,7 @@ private:
                     newIndex += numConnected;
                 }
                 state.currentScreenIndex = newIndex;
-                StoragePolicy::putInt("last_screen", state.currentScreenIndex);
+                storage.putInt("last_screen", state.currentScreenIndex);
             }
         } else {
             int numDisconnected = state.numDisconnectedScreens;
@@ -528,7 +535,7 @@ private:
 
     void bluetoothStart() {
         uint8_t mac[6];
-        HWPolicy::getMacDefault(mac);
+        hw.getMacDefault(mac);
         char name[255];
         snprintf(name, sizeof(name), "RC DIY #%02X%02X", mac[4], mac[5]);
         

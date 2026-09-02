@@ -13,13 +13,15 @@
 #endif
 
 AppState state;
-View<MockDisplayPolicy, MockHWPolicy> view(state);
+MockHWPolicy mockHw;
+MockStoragePolicy mockStorage;
+View<MockDisplayPolicy, MockHWPolicy> view(state, mockHw);
 
 MockViewPolicy<MockDisplayPolicy> viewPolicy(state);
 using TestAppLogic = AppLogic<MockBLEPolicy, MockHWPolicy, MockStoragePolicy>;
 
 EventBus testBus;
-TestAppLogic logic(state, testBus);
+TestAppLogic logic(state, testBus, mockHw, mockStorage);
 
 void flushEvents() {
     Event e;
@@ -31,10 +33,10 @@ void flushEvents() {
 
 void setUp(void) {
     state.reset();
-    MockDisplayPolicy::reset();
-    MockHWPolicy::reset();
-    MockStoragePolicy::reset();
-    MockBLEPolicy::reset();
+    view.getDisplay().reset();
+    mockHw.reset();
+    mockStorage.reset();
+    logic.getBLE().reset();
 
     // flush queue
     Event e;
@@ -51,43 +53,43 @@ void test_applogic_ble_connect(void) {
     logic.setup();
     testBus.push(Event{EventType::BLE_CONNECTED, 0, 0, 0});
     flushEvents();
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("BLE connected!") != std::string::npos);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("BLE connected!") != std::string::npos);
 }
 
 void test_applogic_button_power_off(void) {
     logic.setup();
-    MockHWPolicy::powerKeyPressed = true;
-    MockHWPolicy::currentMillis = 0;
+    mockHw.powerKeyPressed = true;
+    mockHw.currentMillis = 0;
     
     logic.pollInput();
     flushEvents();
     
-    MockHWPolicy::currentMillis = 3500; // 3.5s later
+    mockHw.currentMillis = 3500; // 3.5s later
     logic.pollInput();
     flushEvents();
     
-    TEST_ASSERT_TRUE(MockHWPolicy::sleepCalled);
-    TEST_ASSERT_TRUE(MockDisplayPolicy::lastPrint.find("Powering off...") != std::string::npos);
+    TEST_ASSERT_TRUE(mockHw.sleepCalled);
+    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("Powering off...") != std::string::npos);
 }
 
 void test_applogic_navigation_scroll(void) {
     logic.setup();
-    MockBLEPolicy::simulateConnect();
+    logic.getBLE().simulateConnect();
     state.isConfigured = true;
     state.isConnected = true;
     state.currentScreenIndex = 0;
 
-    MockHWPolicy::navigationDelta = 1;
+    mockHw.navigationDelta = 1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
 
-    MockHWPolicy::navigationDelta = -1;
+    mockHw.navigationDelta = -1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(0, state.currentScreenIndex);
 
-    MockHWPolicy::navigationDelta = -1;
+    mockHw.navigationDelta = -1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(state.numConnectedScreens - 1, state.currentScreenIndex);
@@ -95,7 +97,7 @@ void test_applogic_navigation_scroll(void) {
 
 void test_applogic_screen_persistence() {
     setUp();
-    MockStoragePolicy::reset();
+    mockStorage.reset();
     logic.setup();
 
     state.numConnectedScreens = 3;
@@ -107,11 +109,11 @@ void test_applogic_screen_persistence() {
     TEST_ASSERT_TRUE(state.isConnected);
 
     // Scroll to screen 1
-    MockHWPolicy::navigationDelta = 1;
+    mockHw.navigationDelta = 1;
     logic.pollInput();
     flushEvents();
     TEST_ASSERT_EQUAL(1, state.currentScreenIndex);
-    TEST_ASSERT_EQUAL(1, MockStoragePolicy::storeInt["last_screen"]);
+    TEST_ASSERT_EQUAL(1, mockStorage.storeInt["last_screen"]);
 
     // Disconnect -> should switch to Disconnected screen
     testBus.push(Event{EventType::BLE_DISCONNECTED, 0, 0, 0});
@@ -128,8 +130,8 @@ void test_applogic_screen_persistence() {
 
 void test_applogic_json_config_custom_monitors(void) {
     setUp();
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = "{\n"
+    mockStorage.reset();
+    mockStorage.configFileContent = "{\n"
         "  \"isHud\": true,\n"
         "  \"monitors\": [\n"
         "    {\n"
@@ -157,8 +159,8 @@ void test_applogic_json_config_custom_monitors(void) {
 
 void test_applogic_json_custom_screens(void) {
     setUp();
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = R"json({
+    mockStorage.reset();
+    mockStorage.configFileContent = R"json({
         "isHud": false,
         "monitors": [
             {
@@ -229,8 +231,8 @@ void test_applogic_json_custom_screens(void) {
 
 void test_applogic_json_config_fallback_defaults(void) {
     setUp();
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = ""; // Empty file / missing
+    mockStorage.reset();
+    mockStorage.configFileContent = ""; // Empty file / missing
 
     logic.setup();
     TEST_ASSERT_FALSE(state.isHud);
@@ -242,64 +244,64 @@ void test_applogic_json_config_fallback_defaults(void) {
 
 void test_applogic_json_config_auto_create(void) {
     setUp();
-    MockStoragePolicy::reset();
-    MockStoragePolicy::cardPresent = true;
-    MockStoragePolicy::configFileContent = "";
+    mockStorage.reset();
+    mockStorage.cardPresent = true;
+    mockStorage.configFileContent = "";
 
     logic.setup();
-    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"monitors\"") != std::string::npos);
-    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"screens\"") != std::string::npos);
-    TEST_ASSERT_TRUE(MockStoragePolicy::lastWrittenFileContent.find("\"TIME\"") != std::string::npos);
+    TEST_ASSERT_TRUE(mockStorage.lastWrittenFileContent.find("\"monitors\"") != std::string::npos);
+    TEST_ASSERT_TRUE(mockStorage.lastWrittenFileContent.find("\"screens\"") != std::string::npos);
+    TEST_ASSERT_TRUE(mockStorage.lastWrittenFileContent.find("\"TIME\"") != std::string::npos);
 }
 
 void test_applogic_reconfigure_on_cmd_type_update_all(void) {
     logic.setup();
-    MockBLEPolicy::simulateConnect();
-    MockBLEPolicy::indicating = true;
+    logic.getBLE().simulateConnect();
+    logic.getBLE().indicating = true;
     logic.pollLogic();
     flushEvents();
 
     TEST_ASSERT_TRUE(state.isConfigured);
-    size_t initialCount = MockBLEPolicy::sentConfigCommands.size();
+    size_t initialCount = logic.getBLE().sentConfigCommands.size();
     TEST_ASSERT_TRUE(initialCount > 0);
 
     // Simulate RaceChrono sending CMD_TYPE_UPDATE_ALL (4) upon session continue
     uint8_t cmd[1] = {4};
-    MockBLEPolicy::simulateConfigWrite(std::string((char*)cmd, 1));
+    logic.getBLE().simulateConfigWrite(std::string((char*)cmd, 1));
     flushEvents();
 
     TEST_ASSERT_TRUE(state.isConfigured);
-    TEST_ASSERT_TRUE(MockBLEPolicy::sentConfigCommands.size() > initialCount);
+    TEST_ASSERT_TRUE(logic.getBLE().sentConfigCommands.size() > initialCount);
 }
 
 void test_applogic_reconfigure_on_indication_toggle(void) {
     logic.setup();
-    MockBLEPolicy::simulateConnect();
-    MockBLEPolicy::indicating = true;
+    logic.getBLE().simulateConnect();
+    logic.getBLE().indicating = true;
     logic.pollLogic();
     flushEvents();
 
     TEST_ASSERT_TRUE(state.isConfigured);
-    size_t initialCount = MockBLEPolicy::sentConfigCommands.size();
+    size_t initialCount = logic.getBLE().sentConfigCommands.size();
 
     // RaceChrono drops indication on session pause/stop
-    MockBLEPolicy::indicating = false;
+    logic.getBLE().indicating = false;
     logic.pollLogic();
     flushEvents();
 
     // RaceChrono re-enables indication on session resume
-    MockBLEPolicy::indicating = true;
+    logic.getBLE().indicating = true;
     logic.pollLogic();
     flushEvents();
 
     TEST_ASSERT_TRUE(state.isConfigured);
-    TEST_ASSERT_TRUE(MockBLEPolicy::sentConfigCommands.size() > initialCount);
+    TEST_ASSERT_TRUE(logic.getBLE().sentConfigCommands.size() > initialCount);
 }
 
 void test_applogic_json_webui_config(void) {
     setUp();
-    MockStoragePolicy::reset();
-    MockStoragePolicy::configFileContent = R"json({
+    mockStorage.reset();
+    mockStorage.configFileContent = R"json({
         "isHud": false,
         "webui": {
             "enabled": true,
@@ -319,46 +321,46 @@ void test_applogic_json_webui_config(void) {
 
 void test_applogic_config_mode_events(void) {
     setUp();
-    MockHWPolicy::reset();
+    mockHw.reset();
     logic.setup();
-    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_FALSE(state.isConfiguring(mockHw.millis()));
 
     // Enter config mode
-    MockHWPolicy::currentMillis = 5000;
+    mockHw.currentMillis = 5000;
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
     TEST_ASSERT_EQUAL_UINT32(5000, state.lastHeartbeatMillis);
-    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_TRUE(state.isConfiguring(mockHw.millis()));
 
     // Exit config mode
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_EXIT, 0, 0, 0});
     TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
-    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_FALSE(state.isConfiguring(mockHw.millis()));
 
     // Enter config mode again
-    MockHWPolicy::currentMillis = 10000;
+    mockHw.currentMillis = 10000;
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
-    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_TRUE(state.isConfiguring(mockHw.millis()));
 
     // Config reload exits config mode
     logic.processEvent(Event{EventType::EVENT_CONFIG_RELOAD, 0, 0, 0});
     TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
-    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_FALSE(state.isConfiguring(mockHw.millis()));
 
     // Test automatic timeout in pollLogic
-    MockHWPolicy::currentMillis = 20000;
+    mockHw.currentMillis = 20000;
     logic.processEvent(Event{EventType::EVENT_CONFIG_MODE_ENTER, 0, 0, 0});
-    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_TRUE(state.isConfiguring(mockHw.millis()));
 
     // Advance time by 30s -> still configuring
-    MockHWPolicy::currentMillis += 30000;
+    mockHw.currentMillis += 30000;
     logic.pollLogic();
-    TEST_ASSERT_TRUE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_TRUE(state.isConfiguring(mockHw.millis()));
 
     // Advance time past 60s -> pollLogic expires config mode
-    MockHWPolicy::currentMillis += 30001;
+    mockHw.currentMillis += 30001;
     logic.pollLogic();
     TEST_ASSERT_EQUAL_UINT32(0, state.lastHeartbeatMillis);
-    TEST_ASSERT_FALSE(state.isConfiguring(MockHWPolicy::millis()));
+    TEST_ASSERT_FALSE(state.isConfiguring(mockHw.millis()));
 }
 
 #ifdef ARDUINO

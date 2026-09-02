@@ -9,19 +9,27 @@
 #include <RotaryEncoder.h>
 #include "../../EventBus.h"
 
-namespace {
+class RealHWPolicy {
     RotaryEncoder* encoder = nullptr;
-    PowersBQ25896 PMU;
+    PowersBQ25896 pmu;
 
-    void IRAM_ATTR encIsr() {
-        if (encoder) {
-            encoder->tick();
+    static void encIsr(void* arg) {
+        auto* self = static_cast<RealHWPolicy*>(arg);
+        if (self && self->encoder) {
+            self->encoder->tick();
         }
     }
-}
 
-struct RealHWPolicy {
-    static void initBoard() {
+public:
+    RealHWPolicy() = default;
+    ~RealHWPolicy() {
+        if (encoder) {
+            delete encoder;
+            encoder = nullptr;
+        }
+    }
+
+    void initBoard() {
         // T-Embed specific pins
         ::pinMode(46, OUTPUT);
         ::digitalWrite(46, HIGH);
@@ -42,29 +50,29 @@ struct RealHWPolicy {
         
         if (!encoder) {
             encoder = new RotaryEncoder(4, 5, RotaryEncoder::LatchMode::TWO03);
-            ::attachInterrupt(digitalPinToInterrupt(4), encIsr, CHANGE);
-            ::attachInterrupt(digitalPinToInterrupt(5), encIsr, CHANGE);
+            ::attachInterruptArg(digitalPinToInterrupt(4), encIsr, this, CHANGE);
+            ::attachInterruptArg(digitalPinToInterrupt(5), encIsr, this, CHANGE);
         }
     }
     
-    static int getNavigationDelta() {
+    int getNavigationDelta() {
         if (!encoder) return 0;
         encoder->tick();
         int dir = (int)encoder->getDirection();
         return dir;
     }
 
-    static void pollExtraEvents(EventBus& bus) {}
+    void pollExtraEvents(EventBus& bus) {}
 
-    static bool isPowerKeyPressed() {
+    bool isPowerKeyPressed() {
         return ::digitalRead(6) == LOW; // BOARD_USER_KEY
     }
 
-    static bool isActionKeyPressed() {
+    bool isActionKeyPressed() {
         return ::digitalRead(0) == LOW; // ENCODER_KEY
     }
 
-    static void powerOffBoard() {
+    void powerOffBoard() {
         ::digitalWrite(15, LOW); // BOARD_PWR_EN
         // Wait until the user releases the button, otherwise it immediately wakes up from deep sleep
         while (::digitalRead(6) == LOW) {
@@ -74,19 +82,19 @@ struct RealHWPolicy {
         esp_deep_sleep_start();
     }
 
-    static void reboot() {
+    void reboot() {
         ESP.restart();
     }
 
-    static void initBattery() {
+    void initBattery() {
         Wire.begin(8, 18);
-        if (PMU.init(Wire, 8, 18, BQ25896_SLAVE_ADDRESS)) {
-            PMU.enableMeasure();
+        if (pmu.init(Wire, 8, 18, BQ25896_SLAVE_ADDRESS)) {
+            pmu.enableMeasure();
         }
     }
     
-    static int getBatteryPercent() {
-        uint16_t vbat = PMU.getBattVoltage();
+    int getBatteryPercent() {
+        uint16_t vbat = pmu.getBattVoltage();
         if (vbat == 0) return -1;
         int pct = (vbat - 3200) / 10;
         if (pct < 0) pct = 0;
@@ -94,15 +102,15 @@ struct RealHWPolicy {
         return pct;
     }
 
-    static void delay(uint32_t ms) {
+    void delay(uint32_t ms) {
         ::delay(ms);
     }
     
-    static uint32_t millis() {
+    uint32_t millis() {
         return ::millis();
     }
     
-    static void getMacDefault(uint8_t* mac) {
+    void getMacDefault(uint8_t* mac) {
         esp_efuse_mac_get_default(mac);
     }
 };

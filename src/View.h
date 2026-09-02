@@ -9,7 +9,7 @@
 template <typename DisplayPolicy, typename HWPolicy>
 class View {
 public:
-    View(AppState& s) : state(s), displayStarted(false), lastScreenIndex(-1), lastConnected(false), lastConfiguring(false), configuringScreen(nullptr) {}
+    View(AppState& s, HWPolicy& h) : state(s), hw(h), displayStarted(false), lastScreenIndex(-1), lastConnected(false), lastConfiguring(false), configuringScreen(nullptr) {}
 
     void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
         connectedScreens.push_back(screen);
@@ -41,6 +41,10 @@ public:
     int getNumDisconnectedScreens() const {
         return disconnectedScreens.size();
     }
+
+    DisplayPolicy& getDisplay() {
+        return tft;
+    }
     
     void init() {
         tft.init();
@@ -49,7 +53,7 @@ public:
     void processEvent(const Event& e) {
         switch (e.type) {
             case EventType::UI_UPDATE:
-                if (!state.isConnected || state.isConfigured || state.isConfiguring(HWPolicy::millis())) {
+                if (!state.isConnected || state.isConfigured || state.isConfiguring(hw.millis())) {
                     update();
                 }
                 break;
@@ -87,7 +91,7 @@ private:
     void update() {
         int currentIdx = 0;
         IScreen<DisplayPolicy>* activeScreen = nullptr;
-        bool isConfiguring = state.isConfiguring(HWPolicy::millis());
+        bool isConfiguring = state.isConfiguring(hw.millis());
         if (isConfiguring && configuringScreen) {
             activeScreen = configuringScreen;
             currentIdx = 999;
@@ -128,6 +132,7 @@ private:
         tft.println(msg);
     }
     AppState& state;
+    HWPolicy& hw;
     DisplayPolicy tft;
     bool displayStarted;
     int lastScreenIndex;
