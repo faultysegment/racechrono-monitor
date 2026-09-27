@@ -9,13 +9,13 @@
 
 template <typename DisplayPolicy>
 class MockViewPolicy {
+public:
     MonitorScreen<DisplayPolicy> singleScreens[MAX_SCREENS];
     CircularMonitorScreen<DisplayPolicy> circScreens[MAX_SCREENS];
     DualMonitorScreen<DisplayPolicy> dualScreens[MAX_SCREENS];
     DisconnectedMsgScreen<DisplayPolicy> disconnectedMsg;
     ConfiguringScreen<DisplayPolicy> configuringScreen;
 
-public:
     MockViewPolicy(AppState& state) {}
 
     template <typename HWPolicy>

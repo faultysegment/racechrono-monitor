@@ -32,7 +32,7 @@ void setUp(void) {
 void tearDown(void) {}
 
 void test_lvgl_init_state(void) {
-    TEST_ASSERT_FALSE(lv_is_initialized());
+    TEST_ASSERT_TRUE(lv_is_initialized());
 }
 
 class TestScreen : public IScreen {
@@ -98,29 +98,75 @@ void test_view_update_bars(void) {
     state.currentScreenIndex = 1;
     view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("TIME") != std::string::npos);
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+5.00") != std::string::npos);
-    TEST_ASSERT_EQUAL(2, view.getDisplay().lastRects.size());
-    if (view.getDisplay().lastRects.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_RED, view.getDisplay().lastRects[0].color); // Time positive is bad
-        TEST_ASSERT_EQUAL(160, view.getDisplay().lastRects[0].w); // 50% of 320
-        TEST_ASSERT_EQUAL(TFT_DARKGREY, view.getDisplay().lastRects[1].color);
-        TEST_ASSERT_EQUAL(160, view.getDisplay().lastRects[1].w);
-    }
+    TEST_ASSERT_EQUAL_STRING("TIME", lv_label_get_text(viewPolicy.singleScreens[0].getTitleLabel()));
+    TEST_ASSERT_EQUAL_STRING("+5.00", lv_label_get_text(viewPolicy.singleScreens[0].getValueLabel()));
+    TEST_ASSERT_EQUAL(500, lv_bar_get_value(viewPolicy.singleScreens[0].getBar()));
 
     // Test rectangular monitor1 (Speed) - index 3 (circ1 is index 2)
     state.currentScreenIndex = 3;
     view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("SPEED") != std::string::npos);
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+2.0") != std::string::npos);
-    TEST_ASSERT_EQUAL(2, view.getDisplay().lastRects.size());
-    if (view.getDisplay().lastRects.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_GREEN, view.getDisplay().lastRects[0].color); // Speed positive is good
-        TEST_ASSERT_EQUAL(128, view.getDisplay().lastRects[0].w); // 40% of 320
-        TEST_ASSERT_EQUAL(TFT_DARKGREY, view.getDisplay().lastRects[1].color);
-        TEST_ASSERT_EQUAL(192, view.getDisplay().lastRects[1].w); // 320 - 128
-    }
+    TEST_ASSERT_EQUAL_STRING("SPEED", lv_label_get_text(viewPolicy.singleScreens[1].getTitleLabel()));
+    TEST_ASSERT_EQUAL_STRING("+2.0", lv_label_get_text(viewPolicy.singleScreens[1].getValueLabel()));
+    TEST_ASSERT_EQUAL(400, lv_bar_get_value(viewPolicy.singleScreens[1].getBar()));
+}
+
+void test_lvgl_monitor_screen_widgets(void) {
+    if (!lv_is_initialized()) lv_init();
+    MonitorScreen<> screen(ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F});
+    screen.init();
+
+    AppState s;
+    s.isConnected = true;
+    s.isConfigured = true;
+    s.timeLimit = 10.0f;
+    s.addMonitor("TIME", 1.0f, "TIME", false, 2, &s.timeLimit);
+    s.setMonitorValue(0, 5); // +5.00 -> 50%
+
+    screen.update(s);
+    TEST_ASSERT_EQUAL_STRING("TIME", lv_label_get_text(screen.getTitleLabel()));
+    TEST_ASSERT_EQUAL_STRING("+5.00", lv_label_get_text(screen.getValueLabel()));
+    TEST_ASSERT_EQUAL(500, lv_bar_get_value(screen.getBar()));
+
+    // Test negative formatting and gauge mapping
+    s.setMonitorValue(0, -3);
+    screen.update(s);
+    TEST_ASSERT_EQUAL_STRING("-3.00", lv_label_get_text(screen.getValueLabel()));
+    TEST_ASSERT_EQUAL(300, lv_bar_get_value(screen.getBar()));
+
+    // Test zero limit guard
+    s.timeLimit = 0.0f;
+    screen.update(s);
+    TEST_ASSERT_NOT_NULL(screen.getValueLabel());
+
+    // Test exception state
+    s.monitors[0].hasException = true;
+    screen.update(s);
+    TEST_ASSERT_EQUAL_STRING("ERR", lv_label_get_text(screen.getValueLabel()));
+    TEST_ASSERT_EQUAL(0, lv_bar_get_value(screen.getBar()));
+}
+
+void test_lvgl_dual_monitor_screen_widgets(void) {
+    if (!lv_is_initialized()) lv_init();
+    DualMonitorScreen<> screen(ScreenSlotConfig{0, 0xF800, 0x07E0, 0x001F, 0x001F},
+                               ScreenSlotConfig{1, 0x07E0, 0xF800, 0x001F, 0x001F});
+    screen.init();
+
+    AppState s;
+    s.isConnected = true;
+    s.isConfigured = true;
+    s.timeLimit = 10.0f;
+    s.speedLimit = 5.0f;
+    s.addMonitor("TIME", 1.0f, "TIME", false, 2, &s.timeLimit);
+    s.addMonitor("SPEED", 1.0f, "SPEED", true, 1, &s.speedLimit);
+    s.setMonitorValue(0, 5); // 50%
+    s.setMonitorValue(1, 2); // 40%
+
+    screen.update(s);
+    TEST_ASSERT_EQUAL_STRING("+5.00", lv_label_get_text(screen.getTopValueLabel()));
+    TEST_ASSERT_EQUAL_STRING("+2.0", lv_label_get_text(screen.getBtmValueLabel()));
+    TEST_ASSERT_EQUAL(500, lv_bar_get_value(screen.getTopBar()));
+    TEST_ASSERT_EQUAL(400, lv_bar_get_value(screen.getBtmBar()));
 }
 
 void test_mock_display_hud_mode(void) {
@@ -255,6 +301,8 @@ void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_lvgl_init_state);
     RUN_TEST(test_view_init_and_screen_loading);
+    RUN_TEST(test_lvgl_monitor_screen_widgets);
+    RUN_TEST(test_lvgl_dual_monitor_screen_widgets);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
@@ -274,6 +322,8 @@ int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_lvgl_init_state);
     RUN_TEST(test_view_init_and_screen_loading);
+    RUN_TEST(test_lvgl_monitor_screen_widgets);
+    RUN_TEST(test_lvgl_dual_monitor_screen_widgets);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <lvgl.h>
 
 namespace ColorUtils {
 
@@ -36,6 +37,13 @@ inline uint16_t parseHexColor565(const char* hexStr, uint16_t defaultColor) {
     }
 
     return defaultColor;
+}
+
+inline lv_color_t color565ToLVGL(uint16_t c565) {
+    uint8_t r = ((c565 >> 11) & 0x1F) * 255 / 31;
+    uint8_t g = ((c565 >> 5) & 0x3F) * 255 / 63;
+    uint8_t b = (c565 & 0x1F) * 255 / 31;
+    return lv_color_make(r, g, b);
 }
 
 } // namespace ColorUtils

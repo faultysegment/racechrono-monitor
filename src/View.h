@@ -13,18 +13,21 @@ public:
     View(AppState& s, HWPolicy& h) : state(s), hw(h), displayStarted(false), lastScreenIndex(-1), lastConnected(false), lastConfiguring(false), configuringScreen(nullptr) {}
 
     void addConnectedScreen(IScreen* screen) {
+        if (!lv_is_initialized()) init();
         if (screen) screen->init();
         connectedScreens.push_back(screen);
         state.numConnectedScreens = connectedScreens.size();
     }
 
     void addDisconnectedScreen(IScreen* screen) {
+        if (!lv_is_initialized()) init();
         if (screen) screen->init();
         disconnectedScreens.push_back(screen);
         state.numDisconnectedScreens = disconnectedScreens.size();
     }
 
     void setConfiguringScreen(IScreen* screen) {
+        if (!lv_is_initialized()) init();
         if (screen) screen->init();
         configuringScreen = screen;
     }
