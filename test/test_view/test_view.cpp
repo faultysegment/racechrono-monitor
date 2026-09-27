@@ -1,4 +1,5 @@
 #include <unity.h>
+#include <lvgl.h>
 #include "../../src/AppState.h"
 #include "View.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
@@ -29,6 +30,10 @@ void setUp(void) {
 }
 
 void tearDown(void) {}
+
+void test_lvgl_init_state(void) {
+    TEST_ASSERT_FALSE(lv_is_initialized());
+}
 
 void test_view_show_connected(void) {
     view.processEvent(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
@@ -211,6 +216,7 @@ void test_view_configuring_screen(void) {
 void setup() {
     delay(2000);
     UNITY_BEGIN();
+    RUN_TEST(test_lvgl_init_state);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
@@ -228,6 +234,7 @@ void loop() {}
 #else
 int main(int argc, char **argv) {
     UNITY_BEGIN();
+    RUN_TEST(test_lvgl_init_state);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
