@@ -1,37 +1,64 @@
 #pragma once
 #include "IScreen.h"
-#include "../UI.h"
+#include "../AppState.h"
+#include <lvgl.h>
 
 template <typename DisplayPolicy = void>
 class ConfiguringScreen : public IScreen {
-    DisplayPolicy* pDisplay = nullptr;
-    AppState* pState = nullptr;
+    lv_obj_t* root = nullptr;
+    lv_obj_t* title_label = nullptr;
+    lv_obj_t* desc_label = nullptr;
+
 public:
-    void setDisplay(DisplayPolicy* d, AppState* s = nullptr) { pDisplay = d; pState = s; }
+    ~ConfiguringScreen() override { destroy(); }
 
-    void init() override {}
+    void setDisplay(void* d = nullptr, AppState* s = nullptr) {}
+
+    void init() override {
+        if (root) return;
+
+        root = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(root, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+
+        title_label = lv_label_create(root);
+        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -30);
+        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_color(title_label, lv_color_make(0, 255, 255), 0); // Cyan (0x07FF)
+        lv_label_set_text(title_label, "CONFIG MODE");
+
+        desc_label = lv_label_create(root);
+        lv_obj_align(desc_label, LV_ALIGN_CENTER, 0, 25);
+        lv_obj_set_style_text_font(desc_label, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_color(desc_label, lv_color_white(), 0);
+        lv_label_set_text(desc_label, "Editing configuration...");
+    }
+
     void show() override {
-        if (pDisplay && pState) onShow(*pDisplay, *pState);
+        if (!root) init();
     }
+
     void hide() override {}
+
     void update(const AppState& state) override {
-        pState = const_cast<AppState*>(&state);
-        if (pDisplay) onUpdate(*pDisplay, const_cast<AppState&>(state));
-    }
-    lv_obj_t* getRoot() const override { return nullptr; }
-    void destroy() override {}
-
-    void onShow(DisplayPolicy& tft, AppState& state) {
-        tft.fillScreen(0x0000);
-        UI<DisplayPolicy> ui(tft);
-        ui.begin();
-        ui.setCursorY(0.25f);
-        ui.textCenter("CONFIG MODE", 0x07FF, 0.18f); // Cyan
-        ui.setCursorY(0.55f);
-        ui.textCenter("Editing configuration...", 0xFFFF, 0.12f);
+        if (!root) init();
     }
 
-    void onUpdate(DisplayPolicy& tft, AppState& state) {
-        onShow(tft, state);
+    lv_obj_t* getRoot() const override { return root; }
+    lv_obj_t* getTitleLabel() const { return title_label; }
+    lv_obj_t* getDescLabel() const { return desc_label; }
+
+    void destroy() override {
+        if (root) {
+            lv_obj_del(root);
+            root = nullptr;
+            title_label = nullptr;
+            desc_label = nullptr;
+        }
     }
+
+    template <typename DP>
+    void onShow(DP& tft, AppState& state) {}
+    template <typename DP>
+    void onUpdate(DP& tft, AppState& state) {}
 };

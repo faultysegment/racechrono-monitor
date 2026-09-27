@@ -245,18 +245,11 @@ void test_circular_monitor_screen_radial_bar(void) {
 
     // Screen 0 in NativeViewPolicy is circMonitor0
     state.currentScreenIndex = 0;
-    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
 
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("TIME") != std::string::npos);
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("+5.00") != std::string::npos);
-    TEST_ASSERT_EQUAL(TFT_BLUE, view.getDisplay().lastTextColor); // Value text is always blue
-    // Radial bar draws outer circle (filledColor) and inner circle (0x0000)
-    TEST_ASSERT_TRUE(view.getDisplay().lastCircles.size() >= 2);
-    if (view.getDisplay().lastCircles.size() >= 2) {
-        TEST_ASSERT_EQUAL(TFT_RED, view.getDisplay().lastCircles[0].color); // Time positive is bad -> Red
-        TEST_ASSERT_EQUAL(TFT_BLACK, view.getDisplay().lastCircles[1].color); // Inner clear circle
-    }
+    TEST_ASSERT_EQUAL_STRING("TIME", lv_label_get_text(viewPolicy.circScreens[0].getTitleLabel()));
+    TEST_ASSERT_EQUAL_STRING("+5.00", lv_label_get_text(viewPolicy.circScreens[0].getValueLabel()));
+    TEST_ASSERT_EQUAL(500, lv_arc_get_value(viewPolicy.circScreens[0].getArc()));
 }
 
 void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
@@ -268,20 +261,25 @@ void test_circular_monitor_screen_radial_bar_min_10_percent(void) {
     state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
     state.setMonitorValue(0, 1); // 1 / 100 = 1% -> clamped to 10% minimum
 
-    // Screen 0 in NativeViewPolicy is circMonitor0
     state.currentScreenIndex = 0;
-    view.getDisplay().reset();
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
 
-    TEST_ASSERT_TRUE(view.getDisplay().lastCircles.size() >= 2);
-    if (view.getDisplay().lastCircles.size() >= 2) {
-        int radiusOut = view.getDisplay().lastCircles[0].r;
-        int rIn = view.getDisplay().lastCircles[1].r;
-        int maxThickness = std::max(12, (int)std::round((float)radiusOut * 0.15f));
-        int minThickness = 4;
-        int expectedRin = radiusOut - (minThickness + (int)std::round((float)(maxThickness - minThickness) * 0.10f));
-        TEST_ASSERT_EQUAL(expectedRin, rIn);
-    }
+    TEST_ASSERT_EQUAL(100, lv_arc_get_value(viewPolicy.circScreens[0].getArc()));
+}
+
+void test_circular_monitor_screen_exception(void) {
+    state.reset();
+    state.isConnected = true;
+    state.isConfigured = true;
+    state.timeLimit = 10.0f;
+    state.addMonitor("M1", 1.0f, "TIME", false, 2, &state.timeLimit);
+    state.setMonitorException(0, true);
+
+    state.currentScreenIndex = 0;
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+
+    TEST_ASSERT_EQUAL_STRING("ERR", lv_label_get_text(viewPolicy.circScreens[0].getValueLabel()));
+    TEST_ASSERT_EQUAL(0, lv_arc_get_value(viewPolicy.circScreens[0].getArc()));
 }
 
 void test_view_configuring_screen(void) {
@@ -289,10 +287,16 @@ void test_view_configuring_screen(void) {
     state.isConnected = false;
     mockHw.currentMillis = 5000;
     state.lastHeartbeatMillis = 5000;
-    view.getDisplay().reset();
 
     view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
-    TEST_ASSERT_TRUE(view.getDisplay().lastPrint.find("CONFIG MODE") != std::string::npos);
+    TEST_ASSERT_EQUAL_STRING("CONFIG MODE", lv_label_get_text(viewPolicy.configuringScreen.getTitleLabel()));
+}
+
+void test_view_disconnected_screen_spinner(void) {
+    state.reset();
+    state.isConnected = false;
+    view.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+    TEST_ASSERT_NOT_NULL(viewPolicy.disconnectedMsg.getSpinner());
 }
 
 #ifdef ARDUINO
@@ -313,7 +317,9 @@ void setup() {
     RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
+    RUN_TEST(test_circular_monitor_screen_exception);
     RUN_TEST(test_view_configuring_screen);
+    RUN_TEST(test_view_disconnected_screen_spinner);
     UNITY_END();
 }
 void loop() {}
@@ -334,7 +340,9 @@ int main(int argc, char **argv) {
     RUN_TEST(test_view_custom_screen_composition);
     RUN_TEST(test_circular_monitor_screen_radial_bar);
     RUN_TEST(test_circular_monitor_screen_radial_bar_min_10_percent);
+    RUN_TEST(test_circular_monitor_screen_exception);
     RUN_TEST(test_view_configuring_screen);
+    RUN_TEST(test_view_disconnected_screen_spinner);
     UNITY_END();
     return 0;
 }

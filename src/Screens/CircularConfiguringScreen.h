@@ -1,23 +1,64 @@
 #pragma once
 #include "IScreen.h"
-#include "../CircularUI.h"
+#include "../AppState.h"
+#include <lvgl.h>
 
 template <typename DisplayPolicy = void>
 class CircularConfiguringScreen : public IScreen {
-public:
-    void init() override {}
-    void show() override {}
-    void hide() override {}
-    void update(const AppState& state) override {}
-    lv_obj_t* getRoot() const override { return nullptr; }
-    void destroy() override {}
+    lv_obj_t* root = nullptr;
+    lv_obj_t* title_label = nullptr;
+    lv_obj_t* desc_label = nullptr;
 
-    void onShow(DisplayPolicy& tft, AppState& state) {
-        tft.fillScreen(0x0000);
-        CircularUI<DisplayPolicy> ui(tft);
-        ui.textCenter("CONFIG MODE", 0x07FF, 0.09f, 0.35f);
-        ui.textCenter("Editing...", 0xFFFF, 0.07f, 0.60f);
+public:
+    ~CircularConfiguringScreen() override { destroy(); }
+
+    void setDisplay(void* d = nullptr, AppState* s = nullptr) {}
+
+    void init() override {
+        if (root) return;
+
+        root = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(root, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+
+        title_label = lv_label_create(root);
+        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -40);
+        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_28, 0);
+        lv_obj_set_style_text_color(title_label, lv_color_make(0, 255, 255), 0); // Cyan (0x07FF)
+        lv_label_set_text(title_label, "CONFIG MODE");
+
+        desc_label = lv_label_create(root);
+        lv_obj_align(desc_label, LV_ALIGN_CENTER, 0, 30);
+        lv_obj_set_style_text_font(desc_label, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(desc_label, lv_color_white(), 0);
+        lv_label_set_text(desc_label, "Editing...");
     }
 
-    void onUpdate(DisplayPolicy& tft, AppState& state) {}
+    void show() override {
+        if (!root) init();
+    }
+
+    void hide() override {}
+
+    void update(const AppState& state) override {
+        if (!root) init();
+    }
+
+    lv_obj_t* getRoot() const override { return root; }
+    lv_obj_t* getTitleLabel() const { return title_label; }
+    lv_obj_t* getDescLabel() const { return desc_label; }
+
+    void destroy() override {
+        if (root) {
+            lv_obj_del(root);
+            root = nullptr;
+            title_label = nullptr;
+            desc_label = nullptr;
+        }
+    }
+
+    template <typename DP>
+    void onShow(DP& tft, AppState& state) {}
+    template <typename DP>
+    void onUpdate(DP& tft, AppState& state) {}
 };
