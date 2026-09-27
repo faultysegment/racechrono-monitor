@@ -35,6 +35,43 @@ void test_lvgl_init_state(void) {
     TEST_ASSERT_FALSE(lv_is_initialized());
 }
 
+class TestScreen : public IScreen {
+public:
+    bool initCalled = false;
+    bool showCalled = false;
+    bool updateCalled = false;
+    lv_obj_t* root = nullptr;
+
+    void init() override {
+        initCalled = true;
+        root = lv_obj_create(NULL);
+    }
+    void show() override { showCalled = true; }
+    void hide() override {}
+    void update(const AppState& s) override { updateCalled = true; }
+    lv_obj_t* getRoot() const override { return root; }
+    void destroy() override {
+        if (root) { lv_obj_del(root); root = nullptr; }
+    }
+};
+
+void test_view_init_and_screen_loading(void) {
+    View<MockDisplayPolicy, MockHWPolicy> localView(state, mockHw);
+    localView.init();
+    TEST_ASSERT_TRUE(lv_is_initialized());
+
+    TestScreen testScreen;
+    localView.addConnectedScreen(&testScreen);
+    state.isConnected = true;
+    state.isConfigured = true;
+    state.currentScreenIndex = 0;
+
+    localView.processEvent(Event{EventType::UI_UPDATE, 0, 0, 0});
+    TEST_ASSERT_TRUE(testScreen.initCalled);
+    TEST_ASSERT_TRUE(testScreen.updateCalled);
+    TEST_ASSERT_EQUAL_PTR(testScreen.getRoot(), lv_scr_act());
+}
+
 void test_view_show_connected(void) {
     view.processEvent(Event{EventType::UI_SHOW_CONNECTED, 0, 0, 0});
     TEST_ASSERT_EQUAL(TFT_BLACK, view.getDisplay().lastFillScreenColor);
@@ -217,6 +254,7 @@ void setup() {
     delay(2000);
     UNITY_BEGIN();
     RUN_TEST(test_lvgl_init_state);
+    RUN_TEST(test_view_init_and_screen_loading);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);
@@ -235,6 +273,7 @@ void loop() {}
 int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_lvgl_init_state);
+    RUN_TEST(test_view_init_and_screen_loading);
     RUN_TEST(test_view_show_connected);
     RUN_TEST(test_view_show_disconnected);
     RUN_TEST(test_view_update_bars);

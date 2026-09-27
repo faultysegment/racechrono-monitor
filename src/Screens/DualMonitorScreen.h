@@ -5,14 +5,30 @@
 #include <cstdio>
 #include <cstring>
 
-template <typename DisplayPolicy>
-class DualMonitorScreen : public IScreen<DisplayPolicy> {
+template <typename DisplayPolicy = void>
+class DualMonitorScreen : public IScreen {
     ScreenSlotConfig mTopSlot;
     ScreenSlotConfig mBtmSlot;
+    DisplayPolicy* pDisplay = nullptr;
+    AppState* pState = nullptr;
 
 public:
     DualMonitorScreen(int topIdx = 0, int btmIdx = 1) : mTopSlot(topIdx), mBtmSlot(btmIdx) {}
     DualMonitorScreen(const ScreenSlotConfig& top, const ScreenSlotConfig& btm) : mTopSlot(top), mBtmSlot(btm) {}
+
+    void setDisplay(DisplayPolicy* d, AppState* s = nullptr) { pDisplay = d; pState = s; }
+
+    void init() override {}
+    void show() override {
+        if (pDisplay && pState) onShow(*pDisplay, *pState);
+    }
+    void hide() override {}
+    void update(const AppState& state) override {
+        pState = const_cast<AppState*>(&state);
+        if (pDisplay) onUpdate(*pDisplay, const_cast<AppState&>(state));
+    }
+    lv_obj_t* getRoot() const override { return nullptr; }
+    void destroy() override {}
 
     void setSlots(const ScreenSlotConfig& top, const ScreenSlotConfig& btm) {
         mTopSlot = top;
@@ -24,11 +40,11 @@ public:
         mBtmSlot.monitorIndex = btmIdx;
     }
 
-    void onShow(DisplayPolicy& tft, AppState& state) override {
+    void onShow(DisplayPolicy& tft, AppState& state) {
         tft.fillScreen(0x0000); 
     }
 
-    void onUpdate(DisplayPolicy& tft, AppState& state) override {
+    void onUpdate(DisplayPolicy& tft, AppState& state) {
         UI<DisplayPolicy> ui(tft);
         ui.begin();
 

@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <lvgl.h>
 
 #define TFT_BLACK       0x0000
 #define TFT_BLUE        0x001F
@@ -22,6 +24,19 @@ struct MockCircle {
 };
 
 class MockDisplayPolicy {
+    lv_disp_drv_t disp_drv;
+    lv_disp_draw_buf_t draw_buf;
+    lv_color_t buf[320 * 20];
+    bool initialized = false;
+
+    static void flush_cb(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* color_p) {
+        auto* self = static_cast<MockDisplayPolicy*>(drv->user_data);
+        if (self) {
+            self->lastFlushedArea = *area;
+        }
+        lv_disp_flush_ready(drv);
+    }
+
 public:
     std::string lastPrint = "";
     uint32_t lastFillScreenColor = 0;
@@ -31,6 +46,7 @@ public:
     std::vector<uint32_t> allTextColors;
     bool isHud = false;
     int currentTextSize = 1;
+    lv_area_t lastFlushedArea = {0, 0, 0, 0};
 
     void reset() {
         lastPrint = "";
@@ -43,7 +59,23 @@ public:
         currentTextSize = 1;
     }
 
-    void init() {}
+    void init() {
+        if (!initialized) {
+            if (!lv_is_initialized()) {
+                lv_init();
+            }
+            lv_disp_draw_buf_init(&draw_buf, buf, NULL, 320 * 20);
+            lv_disp_drv_init(&disp_drv);
+            disp_drv.draw_buf = &draw_buf;
+            disp_drv.flush_cb = flush_cb;
+            disp_drv.hor_res = 320;
+            disp_drv.ver_res = 170;
+            disp_drv.user_data = this;
+            lv_disp_drv_register(&disp_drv);
+            initialized = true;
+        }
+    }
+
     void setRotation(uint8_t r) {}
     void setHudMode(bool hud) { isHud = hud; }
     void fillScreen(uint32_t color) { lastFillScreenColor = color; }

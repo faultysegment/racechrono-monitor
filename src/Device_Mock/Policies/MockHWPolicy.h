@@ -23,6 +23,7 @@ struct MockHWPolicy {
     }
 
     void initBoard() {}
+    void initIndev() {}
     
     int getNavigationDelta() {
         int d = navigationDelta;

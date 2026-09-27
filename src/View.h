@@ -3,6 +3,7 @@
 #include "AppState.h"
 #include <cmath>
 #include <vector>
+#include <lvgl.h>
 #include "Screens/IScreen.h"
 #include "EventBus.h"
 
@@ -11,17 +12,20 @@ class View {
 public:
     View(AppState& s, HWPolicy& h) : state(s), hw(h), displayStarted(false), lastScreenIndex(-1), lastConnected(false), lastConfiguring(false), configuringScreen(nullptr) {}
 
-    void addConnectedScreen(IScreen<DisplayPolicy>* screen) {
+    void addConnectedScreen(IScreen* screen) {
+        if (screen) screen->init();
         connectedScreens.push_back(screen);
         state.numConnectedScreens = connectedScreens.size();
     }
 
-    void addDisconnectedScreen(IScreen<DisplayPolicy>* screen) {
+    void addDisconnectedScreen(IScreen* screen) {
+        if (screen) screen->init();
         disconnectedScreens.push_back(screen);
         state.numDisconnectedScreens = disconnectedScreens.size();
     }
 
-    void setConfiguringScreen(IScreen<DisplayPolicy>* screen) {
+    void setConfiguringScreen(IScreen* screen) {
+        if (screen) screen->init();
         configuringScreen = screen;
     }
 
@@ -47,7 +51,11 @@ public:
     }
     
     void init() {
+        if (!lv_is_initialized()) {
+            lv_init();
+        }
         tft.init();
+        hw.initIndev();
     }
     
     void processEvent(const Event& e) {
@@ -90,7 +98,7 @@ public:
 private:
     void update() {
         int currentIdx = 0;
-        IScreen<DisplayPolicy>* activeScreen = nullptr;
+        IScreen* activeScreen = nullptr;
         bool isConfiguring = state.isConfiguring(hw.millis());
         if (isConfiguring && configuringScreen) {
             activeScreen = configuringScreen;
@@ -116,21 +124,25 @@ private:
             lastConnected = state.isConnected;
             lastConfiguring = isConfiguring;
             
-            activeScreen->onShow(tft, state);
+            if (activeScreen->getRoot()) {
+                lv_scr_load(activeScreen->getRoot());
+            }
+            activeScreen->show();
             tft.drawBattery(state.batteryPercent, true);
         }
         
-        activeScreen->onUpdate(tft, state);
+        activeScreen->update(state);
         tft.drawBattery(state.batteryPercent, false);
         tft.flush();
     }
-    
+
     void showMessage(const char* msg, uint32_t color = 0xFFFF, uint32_t bg = 0x0000) {
         tft.fillScreen(bg);
         tft.setCursor(0, 0);
         tft.setTextColor(color);
         tft.println(msg);
     }
+    
     AppState& state;
     HWPolicy& hw;
     DisplayPolicy tft;
@@ -139,7 +151,7 @@ private:
     bool lastConnected;
     bool lastConfiguring;
 
-    IScreen<DisplayPolicy>* configuringScreen;
-    std::vector<IScreen<DisplayPolicy>*> connectedScreens;
-    std::vector<IScreen<DisplayPolicy>*> disconnectedScreens;
+    IScreen* configuringScreen;
+    std::vector<IScreen*> connectedScreens;
+    std::vector<IScreen*> disconnectedScreens;
 };

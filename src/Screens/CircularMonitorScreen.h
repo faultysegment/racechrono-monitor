@@ -5,9 +5,11 @@
 #include <cstdio>
 #include <algorithm>
 
-template <typename DisplayPolicy>
-class CircularMonitorScreen : public IScreen<DisplayPolicy> {
+template <typename DisplayPolicy = void>
+class CircularMonitorScreen : public IScreen {
     ScreenSlotConfig mSlot;
+    DisplayPolicy* pDisplay = nullptr;
+    AppState* pState = nullptr;
     float lastVal;
     uint32_t lastColor;
     bool lastHasException;
@@ -21,6 +23,20 @@ public:
     CircularMonitorScreen(const ScreenSlotConfig& slot)
         : mSlot(slot), lastVal(-9999.0f), lastColor(0), lastHasException(false), lastValueValid(false), forceFullRedraw(true) {}
 
+    void setDisplay(DisplayPolicy* d, AppState* s = nullptr) { pDisplay = d; pState = s; }
+
+    void init() override {}
+    void show() override {
+        if (pDisplay && pState) onShow(*pDisplay, *pState);
+    }
+    void hide() override {}
+    void update(const AppState& state) override {
+        pState = const_cast<AppState*>(&state);
+        if (pDisplay) onUpdate(*pDisplay, const_cast<AppState&>(state));
+    }
+    lv_obj_t* getRoot() const override { return nullptr; }
+    void destroy() override {}
+
     void setConfig(const ScreenSlotConfig& slot) {
         mSlot = slot;
         forceFullRedraw = true;
@@ -31,7 +47,7 @@ public:
         forceFullRedraw = true;
     }
 
-    void onShow(DisplayPolicy& tft, AppState& state) override {
+    void onShow(DisplayPolicy& tft, AppState& state) {
         tft.fillScreen(0x0000); 
         lastVal = -9999.0f;
         lastColor = 0;
@@ -40,7 +56,7 @@ public:
         forceFullRedraw = true;
     }
 
-    void onUpdate(DisplayPolicy& tft, AppState& state) override {
+    void onUpdate(DisplayPolicy& tft, AppState& state) {
         CircularUI<DisplayPolicy> ui(tft);
         int mIdx = mSlot.monitorIndex;
         

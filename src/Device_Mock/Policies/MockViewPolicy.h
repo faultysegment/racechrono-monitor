@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "AppState.h"
 #include "View.h"
 #include "Screens/MonitorScreen.h"
@@ -24,16 +24,21 @@ public:
         for (int i = 0; i < state.numScreenConfigs && i < MAX_SCREENS; ++i) {
             const auto& sc = state.screenConfigs[i];
             if (sc.type == ScreenType::SINGLE) {
+                circScreens[i].setDisplay(&appView.getDisplay(), &state);
                 circScreens[i].setConfig(sc.primary);
                 appView.addConnectedScreen(&circScreens[i]);
+                singleScreens[i].setDisplay(&appView.getDisplay(), &state);
                 singleScreens[i].setConfig(sc.primary);
                 appView.addConnectedScreen(&singleScreens[i]);
             } else if (sc.type == ScreenType::DUAL) {
+                dualScreens[i].setDisplay(&appView.getDisplay(), &state);
                 dualScreens[i].setSlots(sc.primary, sc.secondary);
                 appView.addConnectedScreen(&dualScreens[i]);
             }
         }
+        disconnectedMsg.setDisplay(&appView.getDisplay(), &state);
         appView.addDisconnectedScreen(&disconnectedMsg);
+        configuringScreen.setDisplay(&appView.getDisplay(), &state);
         appView.setConfiguringScreen(&configuringScreen);
     }
 };

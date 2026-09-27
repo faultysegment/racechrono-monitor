@@ -4,12 +4,28 @@
 #include <cmath>
 #include <cstdio>
 
-template <typename DisplayPolicy>
-class MonitorScreen : public IScreen<DisplayPolicy> {
+template <typename DisplayPolicy = void>
+class MonitorScreen : public IScreen {
     ScreenSlotConfig mSlot;
+    DisplayPolicy* pDisplay = nullptr;
+    AppState* pState = nullptr;
 public:
     MonitorScreen(int monitorIndex = 0) : mSlot(monitorIndex) {}
     MonitorScreen(const ScreenSlotConfig& slot) : mSlot(slot) {}
+
+    void setDisplay(DisplayPolicy* d, AppState* s = nullptr) { pDisplay = d; pState = s; }
+
+    void init() override {}
+    void show() override {
+        if (pDisplay && pState) onShow(*pDisplay, *pState);
+    }
+    void hide() override {}
+    void update(const AppState& state) override {
+        pState = const_cast<AppState*>(&state);
+        if (pDisplay) onUpdate(*pDisplay, const_cast<AppState&>(state));
+    }
+    lv_obj_t* getRoot() const override { return nullptr; }
+    void destroy() override {}
 
     void setConfig(const ScreenSlotConfig& slot) {
         mSlot = slot;
@@ -19,7 +35,7 @@ public:
         mSlot.monitorIndex = idx;
     }
 
-    void onShow(DisplayPolicy& tft, AppState& state) override {
+    void onShow(DisplayPolicy& tft, AppState& state) {
         tft.fillScreen(0x0000); 
         UI<DisplayPolicy> ui(tft);
         ui.begin();
@@ -31,7 +47,7 @@ public:
         }
     }
 
-    void onUpdate(DisplayPolicy& tft, AppState& state) override {
+    void onUpdate(DisplayPolicy& tft, AppState& state) {
         int mIdx = mSlot.monitorIndex;
         if (mIdx >= 0 && state.nextMonitorId > mIdx) {
             UI<DisplayPolicy> ui(tft);
