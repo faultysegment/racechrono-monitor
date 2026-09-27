@@ -4,6 +4,8 @@
 #include <BLEDevice.h>
 #include <Preferences.h>
 #include <Arduino_GFX_Library.h>
+#include <lvgl.h>
+#include <esp_timer.h>
 
 #include "Policies/AmoledDisplayPolicy.h"
 #include "Policies/AmoledHWPolicy.h"
@@ -16,14 +18,20 @@
 App<AmoledDisplayPolicy, AmoledHWPolicy, AmoledBLEPolicy, AmoledStoragePolicy, AmoledViewPolicy<AmoledDisplayPolicy>> app;
 AmoledWebConfigPolicy<AmoledStoragePolicy> webConfig;
 
+static void lv_tick_task(void* arg) {
+    lv_tick_inc(1);
+}
+
 void uiTask(void* pvParameters) {
     Event e;
     while (1) {
-        if (app.getEventBus().pop_with_timeout(e, 25)) {
+        if (app.getEventBus().pop_with_timeout(e, 5)) {
             app.processEvent(e);
         } else {
             app.tickUI();
         }
+        lv_timer_handler();
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
 
@@ -51,6 +59,14 @@ void webTask(void* pvParameters) {
 
 void setup() {
     app.setup();
+
+    const esp_timer_create_args_t periodic_timer_args = {
+        .callback = &lv_tick_task,
+        .name = "periodic_gui"
+    };
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 1000));
 
     app.getEventBus().push(Event{EventType::UI_UPDATE, 0, 0, 0});
 

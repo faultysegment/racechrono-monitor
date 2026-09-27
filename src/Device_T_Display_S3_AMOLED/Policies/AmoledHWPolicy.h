@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <Wire.h>
+#include <lvgl.h>
 #include "pin_config.h"
 #include "../../EventBus.h"
 #include <TouchDrvCST92xx.h>
@@ -24,6 +25,25 @@ class AmoledHWPolicy {
     int16_t currentY = 0;
     bool isSwiping = false;
     uint32_t lastPoll = 0;
+
+    int16_t lastTouchX = 0;
+    int16_t lastTouchY = 0;
+    bool lastTouchPressed = false;
+
+    lv_indev_drv_t indev_drv;
+    lv_indev_t* touch_indev = nullptr;
+
+    static void touch_read(lv_indev_drv_t* drv, lv_indev_data_t* data) {
+        auto* self = static_cast<AmoledHWPolicy*>(drv->user_data);
+        if (!self) return;
+        if (self->lastTouchPressed) {
+            data->state = LV_INDEV_STATE_PR;
+            data->point.x = self->lastTouchX;
+            data->point.y = self->lastTouchY;
+        } else {
+            data->state = LV_INDEV_STATE_REL;
+        }
+    }
 
     void finishGesture(EventBus& bus) {
         if (!isSwiping) return;
@@ -64,6 +84,14 @@ public:
         touch.begin(Wire, 0x5A, IIC_SDA, IIC_SCL);
     }
 
+    void initIndev() {
+        lv_indev_drv_init(&indev_drv);
+        indev_drv.type = LV_INDEV_TYPE_POINTER;
+        indev_drv.read_cb = touch_read;
+        indev_drv.user_data = this;
+        touch_indev = lv_indev_drv_register(&indev_drv);
+    }
+
     void pollExtraEvents(EventBus& bus) {
         uint32_t now = ::millis();
         if (now - lastPoll < TOUCH_POLL_PERIOD_MS) return;
@@ -74,6 +102,9 @@ public:
             if (touched > 0) {
                 int16_t rx = TOUCH_WIDTH - touchX[0];
                 int16_t ry = touchY[0];
+                lastTouchX = rx;
+                lastTouchY = ry;
+                lastTouchPressed = true;
 
                 if (!isSwiping) {
                     startX = rx;
@@ -82,9 +113,14 @@ public:
                 }
                 currentX = rx;
                 currentY = ry;
-            } else if (isSwiping) {
-                finishGesture(bus);
+            } else {
+                lastTouchPressed = false;
+                if (isSwiping) {
+                    finishGesture(bus);
+                }
             }
+        } else {
+            lastTouchPressed = false;
         }
     }
 

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Arduino_GFX_Library.h>
+#include <lvgl.h>
 #include "pin_config.h"
 
 class AmoledDisplayPolicy {
@@ -9,9 +10,31 @@ class AmoledDisplayPolicy {
     Arduino_GFX *gfx = nullptr;
     bool currentHud = false;
 
+    static const uint32_t BUF_SIZE = 454 * 30;
+    lv_color_t* disp_buf = nullptr;
+    lv_disp_draw_buf_t draw_buf;
+    lv_disp_drv_t disp_drv;
+    lv_disp_t* disp = nullptr;
+
+    static void flush_cb(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* color_p) {
+        auto* self = static_cast<AmoledDisplayPolicy*>(drv->user_data);
+        if (!self || !self->gfx) return;
+
+        uint32_t w = (area->x2 - area->x1 + 1);
+        uint32_t h = (area->y2 - area->y1 + 1);
+
+        self->gfx->draw16bitRGBBitmap(area->x1, area->y1, (uint16_t*)&color_p->full, w, h);
+
+        lv_disp_flush_ready(drv);
+    }
+
 public:
     AmoledDisplayPolicy() = default;
     ~AmoledDisplayPolicy() {
+        if (disp_buf) {
+            free(disp_buf);
+            disp_buf = nullptr;
+        }
         if (gfx) { delete gfx; gfx = nullptr; }
         if (bus) { delete bus; bus = nullptr; }
     }
@@ -41,9 +64,24 @@ public:
                 delay(2);
             }
         }
+
+        if (!disp_buf) {
+            disp_buf = (lv_color_t*)malloc(BUF_SIZE * sizeof(lv_color_t));
+            lv_disp_draw_buf_init(&draw_buf, disp_buf, NULL, BUF_SIZE);
+
+            lv_disp_drv_init(&disp_drv);
+            disp_drv.hor_res = 454;
+            disp_drv.ver_res = 454;
+            disp_drv.flush_cb = flush_cb;
+            disp_drv.draw_buf = &draw_buf;
+            disp_drv.user_data = this;
+
+            disp = lv_disp_drv_register(&disp_drv);
+        }
     }
 
     void setRotation(uint8_t r) {}
+
     void setHudMode(bool hud) {
         if (currentHud == hud) return;
         currentHud = hud;
@@ -61,7 +99,7 @@ public:
     void setTextColor(uint16_t c) { if (gfx) gfx->setTextColor(c); }
     void setTextColor(uint16_t c, uint16_t bg) { if (gfx) gfx->setTextColor(c, bg); }
     void setTextSize(uint8_t s) { if (gfx) gfx->setTextSize(s); }
-    void setTextWrap(bool w) { if (gfx) gfx->setTextWrap(w); }
+    void setTextWrap(bool wrap) { if (gfx) gfx->setTextWrap(wrap); }
     size_t print(const char* str) { return gfx ? gfx->print(str) : 0; }
     size_t print(int n) { return gfx ? gfx->print(n) : 0; }
     size_t println(const char* str) { return gfx ? gfx->println(str) : 0; }
