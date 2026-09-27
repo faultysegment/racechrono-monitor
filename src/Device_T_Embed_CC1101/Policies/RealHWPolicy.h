@@ -7,16 +7,33 @@
 #define XPOWERS_CHIP_BQ25896
 #include <XPowersLib.h>
 #include <RotaryEncoder.h>
+#include <lvgl.h>
 #include "../../EventBus.h"
 
 class RealHWPolicy {
     RotaryEncoder* encoder = nullptr;
     PowersBQ25896 pmu;
 
+    lv_indev_drv_t indev_drv;
+    lv_indev_t* enc_indev = nullptr;
+    int lastIndevDelta = 0;
+
     static void encIsr(void* arg) {
         auto* self = static_cast<RealHWPolicy*>(arg);
         if (self && self->encoder) {
             self->encoder->tick();
+        }
+    }
+
+    static void encoder_read(lv_indev_drv_t* drv, lv_indev_data_t* data) {
+        auto* self = static_cast<RealHWPolicy*>(drv->user_data);
+        if (!self) return;
+        data->enc_diff = self->lastIndevDelta;
+        self->lastIndevDelta = 0;
+        if (self->isActionKeyPressed()) {
+            data->state = LV_INDEV_STATE_PR;
+        } else {
+            data->state = LV_INDEV_STATE_REL;
         }
     }
 
@@ -55,11 +72,20 @@ public:
             ::attachInterruptArg(digitalPinToInterrupt(5), encIsr, this, CHANGE);
         }
     }
+
+    void initIndev() {
+        lv_indev_drv_init(&indev_drv);
+        indev_drv.type = LV_INDEV_TYPE_ENCODER;
+        indev_drv.read_cb = encoder_read;
+        indev_drv.user_data = this;
+        enc_indev = lv_indev_drv_register(&indev_drv);
+    }
     
     int getNavigationDelta() {
         if (!encoder) return 0;
         encoder->tick();
         int dir = (int)encoder->getDirection();
+        lastIndevDelta += dir;
         return dir;
     }
 
