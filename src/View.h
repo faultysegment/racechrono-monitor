@@ -129,6 +129,7 @@ private:
             
             if (activeScreen->getRoot()) {
                 lv_scr_load(activeScreen->getRoot());
+                lv_obj_invalidate(activeScreen->getRoot());
             }
             activeScreen->show();
             tft.drawBattery(state.batteryPercent, true);
@@ -141,9 +142,11 @@ private:
 
     void showMessage(const char* msg, uint32_t color = 0xFFFF, uint32_t bg = 0x0000) {
         tft.fillScreen(bg);
-        tft.setCursor(0, 0);
+        int16_t w = tft.textWidth(msg);
+        tft.setCursor((tft.width() - w) / 2, tft.height() / 2 - 8);
         tft.setTextColor(color);
         tft.println(msg);
+        tft.flush();
     }
     
     AppState& state;

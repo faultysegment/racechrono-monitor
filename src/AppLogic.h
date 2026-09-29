@@ -40,7 +40,7 @@ class AppLogic {
 
 public:
     AppLogic(AppState& s, EventBus& b, HWPolicy& h, StoragePolicy& st) : 
-        state(s), bus(b), hw(h), storage(st), wasConnected(true), wasIndicating(false),
+        state(s), bus(b), hw(h), storage(st), wasConnected(false), wasIndicating(false),
         buttonPressStartTime(0), buttonPressed(false), lastActionBtn(false), actionBtnPressTime(0), lastBatteryUpdate(0) {
     }
 

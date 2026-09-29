@@ -22,14 +22,15 @@ public:
         lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
 
         title_label = lv_label_create(root);
-        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -50);
-        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_28, 0);
+        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_32, 0);
         lv_obj_set_style_text_color(title_label, lv_color_make(255, 0, 0), 0);
-        lv_label_set_text(title_label, "DISCONNECTED");
+        lv_obj_set_style_text_align(title_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_label_set_text(title_label, "Disconnected");
+        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -60);
 
         spinner = lv_spinner_create(root, 1000, 60);
-        lv_obj_set_size(spinner, 80, 80);
-        lv_obj_align(spinner, LV_ALIGN_CENTER, 0, 40);
+        lv_obj_set_size(spinner, 90, 90);
+        lv_obj_align(spinner, LV_ALIGN_CENTER, 0, 45);
         lv_obj_set_style_arc_color(spinner, lv_color_make(255, 0, 0), LV_PART_INDICATOR);
         lv_obj_set_style_arc_color(spinner, lv_color_make(50, 50, 50), LV_PART_MAIN);
     }

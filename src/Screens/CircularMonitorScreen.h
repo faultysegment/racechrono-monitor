@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
+#include "lv_font_montserrat_80.h"
 
 template <typename DisplayPolicy = void>
 class CircularMonitorScreen : public IScreen {
@@ -40,7 +41,11 @@ public:
 
         // Circular Radial Arc
         arc = lv_arc_create(root);
-        lv_obj_set_size(arc, 438, 438);
+        lv_coord_t scr_w = lv_disp_get_hor_res(NULL);
+        lv_coord_t scr_h = lv_disp_get_ver_res(NULL);
+        lv_coord_t arc_size = (scr_w > 0 && scr_h > 0) ? (std::min(scr_w, scr_h) - 16) : 450;
+        if (arc_size < 50) arc_size = 450;
+        lv_obj_set_size(arc, arc_size, arc_size);
         lv_obj_align(arc, LV_ALIGN_CENTER, 0, 0);
         lv_arc_set_rotation(arc, 270);
         lv_arc_set_bg_angles(arc, 0, 360);
@@ -57,24 +62,27 @@ public:
 
         // Title
         title_label = lv_label_create(root);
-        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -90);
-        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_font(title_label, &lv_font_montserrat_36, 0);
         lv_obj_set_style_text_color(title_label, ColorUtils::color565ToLVGL(mSlot.titleColor), 0);
+        lv_obj_set_style_text_align(title_label, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_text(title_label, "WAIT");
+        lv_obj_align(title_label, LV_ALIGN_CENTER, 0, -100);
 
         // Center Value
         value_label = lv_label_create(root);
-        lv_obj_align(value_label, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_style_text_font(value_label, &lv_font_montserrat_48, 0);
+        lv_obj_set_style_text_font(value_label, &lv_font_montserrat_80, 0);
         lv_obj_set_style_text_color(value_label, lv_color_white(), 0);
+        lv_obj_set_style_text_align(value_label, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_text(value_label, "---");
+        lv_obj_align(value_label, LV_ALIGN_CENTER, 0, 0);
 
         // Battery / Status Label
         battery_label = lv_label_create(root);
-        lv_obj_align(battery_label, LV_ALIGN_CENTER, 0, 110);
-        lv_obj_set_style_text_font(battery_label, &lv_font_montserrat_18, 0);
+        lv_obj_set_style_text_font(battery_label, &lv_font_montserrat_20, 0);
         lv_obj_set_style_text_color(battery_label, lv_color_white(), 0);
+        lv_obj_set_style_text_align(battery_label, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_text(battery_label, "---%");
+        lv_obj_align(battery_label, LV_ALIGN_CENTER, 0, 115);
     }
 
     void show() override {

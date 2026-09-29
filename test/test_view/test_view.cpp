@@ -2,6 +2,8 @@
 #include <lvgl.h>
 #include "../../src/AppState.h"
 #include "View.h"
+#include "../../src/Screens/CircularDisconnectedScreen.h"
+#include "../../src/Device_All/DisplayRounder.h"
 #include "../../src/Device_Mock/Policies/MockDisplayPolicy.h"
 #include "../../src/Device_Mock/Policies/MockHWPolicy.h"
 #include "../../src/Device_Mock/Policies/MockViewPolicy.h"
@@ -299,6 +301,72 @@ void test_view_disconnected_screen_spinner(void) {
     TEST_ASSERT_NOT_NULL(viewPolicy.disconnectedMsg.getSpinner());
 }
 
+void test_circular_disconnected_screen_label(void) {
+    CircularDisconnectedScreen<> screen;
+    screen.init();
+    TEST_ASSERT_NOT_NULL(screen.getTitleLabel());
+    TEST_ASSERT_EQUAL_STRING("Disconnected", lv_label_get_text(screen.getTitleLabel()));
+}
+
+void test_display_rounder_unaligned_coords(void) {
+    lv_disp_drv_t drv;
+    lv_disp_drv_init(&drv);
+    drv.hor_res = 466;
+    drv.ver_res = 466;
+
+    lv_area_t area = {5, 7, 12, 14}; // odd start, even end
+    DisplayRounder::roundToEven(&drv, &area);
+
+    // Starting coordinates must be rounded down to even
+    TEST_ASSERT_EQUAL(4, area.x1);
+    TEST_ASSERT_EQUAL(6, area.y1);
+    // Ending coordinates must be rounded up to odd
+    TEST_ASSERT_EQUAL(13, area.x2);
+    TEST_ASSERT_EQUAL(15, area.y2);
+
+    // Dimensions (x2 - x1 + 1) must be strictly even
+    TEST_ASSERT_EQUAL(0, (area.x2 - area.x1 + 1) % 2);
+    TEST_ASSERT_EQUAL(0, (area.y2 - area.y1 + 1) % 2);
+    TEST_ASSERT_EQUAL(10, area.x2 - area.x1 + 1);
+    TEST_ASSERT_EQUAL(10, area.y2 - area.y1 + 1);
+}
+
+void test_display_rounder_boundary(void) {
+    lv_disp_drv_t drv;
+    lv_disp_drv_init(&drv);
+    drv.hor_res = 466;
+    drv.ver_res = 466;
+
+    lv_area_t area = {464, 464, 464, 464}; // right/bottom near boundary
+    DisplayRounder::roundToEven(&drv, &area);
+
+    TEST_ASSERT_EQUAL(464, area.x1);
+    TEST_ASSERT_EQUAL(464, area.y1);
+    TEST_ASSERT_EQUAL(465, area.x2);
+    TEST_ASSERT_EQUAL(465, area.y2);
+    TEST_ASSERT_TRUE(area.x2 < drv.hor_res);
+    TEST_ASSERT_TRUE(area.y2 < drv.ver_res);
+    TEST_ASSERT_EQUAL(2, area.x2 - area.x1 + 1);
+    TEST_ASSERT_EQUAL(2, area.y2 - area.y1 + 1);
+}
+
+void test_display_rounder_single_odd_pixel(void) {
+    lv_disp_drv_t drv;
+    lv_disp_drv_init(&drv);
+    drv.hor_res = 466;
+    drv.ver_res = 466;
+
+    lv_area_t area = {15, 23, 15, 23}; // single odd pixel
+    DisplayRounder::roundToEven(&drv, &area);
+
+    TEST_ASSERT_EQUAL(14, area.x1);
+    TEST_ASSERT_EQUAL(22, area.y1);
+    TEST_ASSERT_EQUAL(15, area.x2);
+    TEST_ASSERT_EQUAL(23, area.y2);
+    TEST_ASSERT_EQUAL(2, area.x2 - area.x1 + 1);
+    TEST_ASSERT_EQUAL(2, area.y2 - area.y1 + 1);
+}
+
 #ifdef ARDUINO
 void setup() {
     delay(2000);
@@ -320,6 +388,9 @@ void setup() {
     RUN_TEST(test_circular_monitor_screen_exception);
     RUN_TEST(test_view_configuring_screen);
     RUN_TEST(test_view_disconnected_screen_spinner);
+    RUN_TEST(test_display_rounder_unaligned_coords);
+    RUN_TEST(test_display_rounder_boundary);
+    RUN_TEST(test_display_rounder_single_odd_pixel);
     UNITY_END();
 }
 void loop() {}
@@ -343,6 +414,10 @@ int main(int argc, char **argv) {
     RUN_TEST(test_circular_monitor_screen_exception);
     RUN_TEST(test_view_configuring_screen);
     RUN_TEST(test_view_disconnected_screen_spinner);
+    RUN_TEST(test_circular_disconnected_screen_label);
+    RUN_TEST(test_display_rounder_unaligned_coords);
+    RUN_TEST(test_display_rounder_boundary);
+    RUN_TEST(test_display_rounder_single_odd_pixel);
     UNITY_END();
     return 0;
 }

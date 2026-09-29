@@ -4,13 +4,14 @@
 #include <Arduino_GFX_Library.h>
 #include <lvgl.h>
 #include "pin_config.h"
+#include "../../Device_All/DisplayRounder.h"
 
 class AmoledDisplayPolicy {
     Arduino_DataBus *bus = nullptr;
     Arduino_GFX *gfx = nullptr;
     bool currentHud = false;
 
-    static const uint32_t BUF_SIZE = 454 * 30;
+    static const uint32_t BUF_SIZE = LCD_WIDTH * 40;
     lv_color_t* disp_buf = nullptr;
     lv_disp_draw_buf_t draw_buf;
     lv_disp_drv_t disp_drv;
@@ -70,9 +71,10 @@ public:
             lv_disp_draw_buf_init(&draw_buf, disp_buf, NULL, BUF_SIZE);
 
             lv_disp_drv_init(&disp_drv);
-            disp_drv.hor_res = 454;
-            disp_drv.ver_res = 454;
+            disp_drv.hor_res = LCD_WIDTH;
+            disp_drv.ver_res = LCD_HEIGHT;
             disp_drv.flush_cb = flush_cb;
+            disp_drv.rounder_cb = DisplayRounder::roundToEven;
             disp_drv.draw_buf = &draw_buf;
             disp_drv.user_data = this;
 
